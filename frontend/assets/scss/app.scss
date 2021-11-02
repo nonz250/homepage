@@ -8,8 +8,12 @@
 /**
  * My variables
  */
-@import "color";
+@import "variables";
 
 html {
   font-family: 'Noto Sans JP', sans-serif;
+}
+
+main {
+  margin: 50px 20%;
 }
