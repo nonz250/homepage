@@ -1,5 +1,7 @@
 <template>
-  <div />
+  <footer class="v-Footer">
+    &copy; Nozomi Hosaka
+  </footer>
 </template>
 
 <script>
@@ -8,6 +10,14 @@ export default {
 }
 </script>
 
-<style scoped>
-
+<style scoped lang="scss">
+@import "assets/scss/color";
+.v-Footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  color: $white;
+  background-color: $lab-blue;
+}
 </style>
