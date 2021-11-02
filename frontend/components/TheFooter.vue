@@ -11,7 +11,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/color";
+@import "assets/scss/variables";
 .v-Footer {
   position: fixed;
   bottom: 0;
