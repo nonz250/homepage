@@ -1,6 +1,11 @@
+import * as FontAwesome from './build/fontawesome'
+
 export default {
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
+    htmlAttrs: {
+      lang: 'ja'
+    },
     title: 'Nozomi Hosaka',
     meta: [
       { charset: 'utf-8' },
@@ -28,7 +33,8 @@ export default {
   // Modules for dev and build (recommended): https://go.nuxtjs.dev/config-modules
   buildModules: [
     // https://go.nuxtjs.dev/eslint
-    '@nuxtjs/eslint-module'
+    '@nuxtjs/eslint-module',
+    ['@nuxtjs/fontawesome', { component: 'fontAwesome', suffix: true }]
   ],
 
   // Modules: https://go.nuxtjs.dev/config-modules
@@ -46,7 +52,7 @@ export default {
   // PWA module configuration: https://go.nuxtjs.dev/pwa
   pwa: {
     manifest: {
-      lang: 'en'
+      lang: 'ja'
     }
   },
 
@@ -57,6 +63,14 @@ export default {
   webfontloader: {
     google: {
       families: ['Noto+Sans+JP:400,700']
+    }
+  },
+
+  fontawesome: {
+    icons: {
+      solid: FontAwesome.solid,
+      regular: FontAwesome.regular,
+      brands: FontAwesome.brands
     }
   }
 }
