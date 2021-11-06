@@ -17,7 +17,7 @@ export default {
   bottom: 0;
   left: 0;
   width: 100%;
-  color: $white;
-  background-color: $lab-blue;
+  color: $lnk-black;
+  background-color: $white;
 }
 </style>
