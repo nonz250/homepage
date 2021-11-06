@@ -72,21 +72,16 @@ export default {
   content: '';
   position: absolute;
   top: 0;
-  left: -75%;
+  left: -25%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .3) 100%);
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .2) 100%);
   transform: skewX(-25deg);
 }
 
-//.shine:hover::before {
-//  display: block;
-//  animation: shine 0.7s;
-//}
-
 @keyframes shine {
   100% {
-    left: 125%;
+    left: 50%;
   }
 }
 </style>
