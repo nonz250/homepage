@@ -1,45 +1,211 @@
 <template>
-  <main>
-    <div class="profile-container">
-      <div class="profile-image-container">
-        <profile-images />
+  <div>
+    <div class="graph">
+      <div class="profile-container content">
+        <div class="profile-image-container">
+          <profile-images />
+        </div>
+        <div class="profile-messages-container">
+          <div class="profile-messages">
+            <p>
+              <a
+                href="#"
+                class="message hover-underline"
+                :class="{active: active1}"
+                @click.prevent=""
+                @contextmenu.prevent=""
+              >
+                何かを作ることがとても好きです。
+              </a>
+            </p>
+            <p>
+              <a
+                href="#"
+                class="message hover-underline"
+                :class="{active: active2}"
+                @click.prevent=""
+                @contextmenu.prevent=""
+              >
+                私の制作物や技術で皆様を少しでも笑顔にしたり、楽にしたりすることで
+              </a>
+            </p>
+            <p>
+              <a
+                href="#"
+                class="message hover-underline"
+                :class="{active: active3}"
+                @click.prevent=""
+                @contextmenu.prevent=""
+              >
+                より社会を豊かにできればと考え、日々精進して参ります。
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="profile-main-container">
-        <div class="profile-main">
+    </div>
+
+    <div class="parallax-bg">
+      <div class="profile-main-container content">
+        <div id="about" class="profile-main">
           <h1 class="my-name">
             保坂　望
           </h1>
+
+          <span class="my-name-en">Nozomi Hosaka</span>
+
           <div>
-            <anchor link="https://github.com/nonz250">
+            <anchor link="https://github.com/nonz250" :shine="false">
               <font-awesome-icon :icon="['fab', 'github']" class="sns-icon github" />
             </anchor>
-            <anchor link="https://twitter.com/nonz250">
+            <anchor link="https://twitter.com/nonz250" :shine="false">
               <font-awesome-icon :icon="['fab', 'twitter']" class="sns-icon twitter" />
             </anchor>
           </div>
         </div>
 
-        <div class="profile-sub">
-          <span class="my-name-en">Nozomi Hosaka</span>
-        </div>
-
         <div class="profile-description">
+          <p>
+            💼&nbsp;&nbsp;<anchor link="https://corp.smaregi.jp/">
+              Smaregi,Inc.
+            </anchor>
+          </p>
           <p>🔧&nbsp;&nbsp;Web Application Engineer (PHPer)</p>
-          <p>✍&nbsp;&nbsp;PHP / Laravel / CakePHP / JavaScript / Vue.js / etc...</p>
+          <p>✍&nbsp;&nbsp;PHP / Laravel / CakePHP / JavaScript / Vue.js / Nuxt.js / etc ...</p>
           <p>🏍&nbsp;&nbsp;VULCAN S / Z250</p>
           <p>🎾&nbsp;&nbsp;Tennis</p>
         </div>
+
+        <p>
+          大阪の小さな医薬系ソフトウェアハウスを経て、
+          <anchor link="https://corp.smaregi.jp/">
+            Smaregi,Inc.
+          </anchor>
+          にて活動中。普段はPHPを用いたバックエンドを中心に、Vue.js / Nuxt.jsによるフロントエンドも担当。
+        </p>
+        <p>
+          個人では自作アプリ制作、副業でもアプリ開発やメンター活動などを行っており、日常的にプログラミングに携わっています。<br>
+        </p>
+
+        <p>
+          ✉️&nbsp;&nbsp;<anchor link="mailto:hosaka.non.work@gmail.com">
+            hosaka.non.work@gmail.com
+          </anchor>
+        </p>
       </div>
     </div>
-  </main>
+
+    <div class="graph">
+      <section id="service" class="section content pt-1">
+        <h2>Service</h2>
+        <div class="service-container">
+          <service title="プログラミング開発支援" icon="code">
+            <p>PHP / JavaScript で開発のお手伝いをさせていただきます。</p>
+            <p>フレームワークは問いませんが、Laravel / Vue.js / Nuxt.js ならよりスムースに事が進みます。</p>
+            <p>設計には十分注意して開発するように心がけております。習得技術についてはご相談時にご確認ください。</p>
+            <p>開発支援だけでなく、アプリ制作も承っております。</p>
+          </service>
+          <service title="プログラミングレクチャー" icon="menu_book">
+            <p>PHP / JavaScript などのプログラミング言語の習得のお手伝いをさせていただきます。</p>
+            <p>フレームワークは Laravel / Vue.js / Nuxt.js などを対象にしています。</p>
+            <p>また、業務支援のためのGAS(Google App Script)や、お子様向けのScratchも承っております。</p>
+            <p>その他についてはご相談時にご確認ください。</p>
+          </service>
+        </div>
+      </section>
+    </div>
+
+    <div class="parallax-bg">
+      <section id="works" class="section content pt-1">
+        <h2>Works</h2>
+        <div class="works">
+          <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.png" link="https://developers.smaregi.jp/" />
+          <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.jpg" link="https://apps.smaregi.jp/" />
+          <work name="スマレジ・POS" image-path="images/smaregi.png" link="https://smaregi.jp/" />
+          <work name="Revolver" image-path="images/revolver.png" link="https://revolver.biz/" />
+          <work name="のんラボ" image-path="images/nons-labo.png" link="https://labo.nozomi.bike/" />
+          <work name="今年の抱負メーカー" image-path="images/ambition.png" link="https://ambition.nozomi.bike/" />
+          <work name="旧: Nozomi Hosaka" image-path="images/old_portfolio.png" link="https://portfolio.nozomi.bike/" />
+        </div>
+      </section>
+    </div>
+
+    <div class="graph">
+      <section id="contact" class="section content">
+        <h2>Contact me</h2>
+        <div class="contact-container">
+          <p>
+            <a
+              href="#"
+              class="hover-underline"
+              :class="{active: contactActive}"
+              @click.prevent=""
+              @contextmenu.prevent=""
+            >
+              仕事のご依頼や、ご相談などはお気軽にお問い合わせくださいませ。
+            </a>
+          </p>
+
+          <anchor link="mailto:hosaka.non.work@gmail.com">
+            hosaka.non.work@gmail.com
+          </anchor>
+        </div>
+      </section>
+    </div>
+  </div>
 </template>
 
 <script>
 import Anchor from '~/components/atoms/Anchor'
 import ProfileImages from '~/components/parts/ProfileImages'
+import Work from '~/components/parts/Work'
+import Service from '~/components/parts/Service'
+import scrollMixin from '~/mixins/scrollMixin'
+import mixin from '~/mixins/mixin'
 
 export default {
-  components: { ProfileImages, Anchor }
+  components: { Service, Work, ProfileImages, Anchor },
+  mixins: [mixin, scrollMixin],
+  data () {
+    return {
+      FPS: 60,
+      active1: false,
+      active2: false,
+      active3: false,
+      contactActive: false
+    }
+  },
+  mounted () {
+    this.runDrawUnderLine()
+    setInterval(() => {
+      this.resetUnderLine()
+      this.runDrawUnderLine()
+    }, 15000)
+    setInterval(() => {
+      this.setContactActive()
+    }, 1500)
+  },
+  methods: {
+    runDrawUnderLine () {
+      setTimeout(() => {
+        this.active1 = true
+        setTimeout(() => {
+          this.active2 = true
+          setTimeout(() => {
+            this.active3 = true
+          }, 2000)
+        }, 2000)
+      }, 1000)
+    },
+    resetUnderLine () {
+      this.active1 = false
+      this.active2 = false
+      this.active3 = false
+    },
+    setContactActive () {
+      this.contactActive = this.currentScrollY >= document.body.scrollHeight - window.innerHeight
+    }
+  }
 }
 </script>
 
@@ -47,24 +213,56 @@ export default {
 @import "assets/scss/variables";
 
 .profile-container {
-  display: flex;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  justify-items: center;
+  align-items: center;
 
   > .profile-image-container {
-    margin-right: 3rem;
   }
 
-  > .profile-main-container {
-    > .profile-main {
-      display: flex;
-      align-items: flex-end;
+  > .profile-messages-container {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 0 2rem;
+
+    @media screen and (max-width: 600px) {
+      padding: 0;
     }
 
-    > .profile-sub {
-      margin-bottom: 1rem;
+    > .profile-messages {
+      > p {
+        .message {
+          font-size: 1.1rem;
+          font-style: italic;
+          line-height: 1.7;
+          letter-spacing: .3rem;
+        }
+      }
     }
+  }
+}
 
-    > .name {
-      margin-bottom: 1rem;
+.profile-main-container {
+  margin-top: 3rem;
+
+  > .profile-main {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  > .profile-description {
+    margin-top: 1rem;
+    display: grid;
+    gap: .5rem;
+    grid-template-columns: repeat(auto-fit, minmax($item-size, 1fr));
+
+    > p {
+      margin: 0;
+      padding: 0;
     }
   }
 }
@@ -91,14 +289,27 @@ export default {
 }
 
 .my-name {
-  margin: 0;
+  margin: 0 1rem 0 0;
   padding: 0;
   font-size: 2rem;
   font-weight: normal;
-  margin-right: 1rem;
 
   &-en {
+    margin: 0 1rem 0 0;
     font-size: 1.5rem;
+  }
+}
+
+.section {
+  > .service-container, > .works {
+    padding-bottom: 2rem;
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    justify-items: center;
+  }
+
+  > .contact-container {
   }
 }
 </style>

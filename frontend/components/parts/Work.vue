@@ -9,6 +9,7 @@
 
 <script>
 import Anchor from '~/components/atoms/Anchor'
+
 export default {
   name: 'Work',
   components: { Anchor },
@@ -30,8 +31,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@import "assets/scss/variables";
+
 .v-Work {
-  width: 350px;
+  width: $item-size;
   display: grid;
   align-items: center;
 }

@@ -1,5 +1,5 @@
 <template>
-  <footer class="v-Footer">
+  <footer class="v-Footer parallax-bg">
     &copy; Nozomi Hosaka
   </footer>
 </template>
@@ -19,5 +19,6 @@ export default {
   width: 100%;
   color: $lnk-black;
   background-color: $white;
+  padding: 0 0 0 0 !important;
 }
 </style>

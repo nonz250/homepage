@@ -1,6 +1,6 @@
 <template>
   <header class="v-Header">
-    <div class="actions" :class="{ hide: !hideScrollingActions }">
+    <div class="actions parallax-bg" :class="{ hide: !hideScrollingActions }">
       <div class="left" />
       <div class="center">
         <a href="#about" class="actions-link mr-1">
@@ -38,29 +38,23 @@
 
 <script>
 import Anchor from '~/components/atoms/Anchor'
+import scrollMixin from '~/mixins/scrollMixin'
 
 export default {
   name: 'TheHeader',
   components: { Anchor },
+  mixins: [scrollMixin],
   data () {
     return {
-      FPS: 60,
-      SCROLL_TOP_POSITION: 30,
-      currentScrollY: 0,
       hideScrollingActions: true
     }
   },
   mounted () {
-    this.setCurrentScrollPositionY()
-    document.addEventListener('scroll', this.setCurrentScrollPositionY)
     setInterval(() => {
       this.setHideScrollingActions()
-    }, 1000 / this.FPS)
+    }, 1000 / this.FPS60)
   },
   methods: {
-    setCurrentScrollPositionY () {
-      this.currentScrollY = window.scrollY
-    },
     setHideScrollingActions () {
       this.hideScrollingActions = this.currentScrollY <= this.SCROLL_TOP_POSITION
     }
@@ -82,6 +76,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-content: center;
+  padding: calc(50px - 17.5px) 0 !important;
 }
 
 .actions-link {
