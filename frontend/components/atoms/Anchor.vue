@@ -58,6 +58,7 @@ export default {
 @import "assets/scss/variables";
 
 .v-Anchor {
+  position: relative;
   color: $lnk-black;
   font-weight: bold;
 }

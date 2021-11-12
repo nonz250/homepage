@@ -104,12 +104,28 @@
             <p>フレームワークは問いませんが、Laravel / Vue.js / Nuxt.js ならよりスムースに事が進みます。</p>
             <p>設計には十分注意して開発するように心がけております。習得技術についてはご相談時にご確認ください。</p>
             <p>開発支援だけでなく、アプリ制作も承っております。</p>
+            <p>
+              <anchor link="https://coconala.com/services/1657709">
+                ココナラで依頼する
+              </anchor>
+            </p>
           </service>
           <service title="プログラミングレクチャー" icon="menu_book">
             <p>PHP / JavaScript などのプログラミング言語の習得のお手伝いをさせていただきます。</p>
             <p>フレームワークは Laravel / Vue.js / Nuxt.js などを対象にしています。</p>
             <p>また、業務支援のためのGAS(Google App Script)や、お子様向けのScratchも承っております。</p>
             <p>その他についてはご相談時にご確認ください。</p>
+            <p class="vertical">
+              <span class="trend">人気商品</span>
+              <span class="material-icons-outlined trend">
+                trending_up
+              </span>
+            </p>
+            <p>
+              <anchor link="https://coconala.com/services/1657709">
+                ココナラで依頼する
+              </anchor>
+            </p>
           </service>
         </div>
       </section>
@@ -123,7 +139,7 @@
           <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.jpg" link="https://apps.smaregi.jp/" />
           <work name="スマレジ・POS" image-path="images/smaregi.png" link="https://smaregi.jp/" />
           <work name="Revolver" image-path="images/revolver.png" link="https://revolver.biz/" />
-          <work name="のんラボ" image-path="images/nons-labo.png" link="https://labo.nozomi.bike/" />
+          <work name="のんラボ" image-path="images/nons-labo.png" link="https://labo.nozomi.bike/" attention="私の自作ブログです。" />
           <work name="今年の抱負メーカー" image-path="images/ambition.png" link="https://ambition.nozomi.bike/" />
           <work name="旧: Nozomi Hosaka" image-path="images/old_portfolio.png" link="https://portfolio.nozomi.bike/" />
         </div>
@@ -145,6 +161,10 @@
               仕事のご依頼や、ご相談などはお気軽にお問い合わせくださいませ。
             </a>
           </p>
+
+          <anchor link="https://twitter.com/nonz250" :shine="false">
+            <font-awesome-icon :icon="['fab', 'twitter']" class="sns-icon twitter" />
+          </anchor>
 
           <anchor link="mailto:hosaka.non.work@gmail.com">
             hosaka.non.work@gmail.com
@@ -311,5 +331,9 @@ export default {
 
   > .contact-container {
   }
+}
+
+.trend {
+  color: $red;
 }
 </style>

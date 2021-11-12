@@ -55,7 +55,6 @@ main {
 
 .hover-underline {
   cursor: default;
-  position: relative;
   color: $black;
   text-decoration: none;
   padding-bottom: .25em;
@@ -64,6 +63,14 @@ main {
 
   &.active {
     background-size: 100% 2px;
+  }
+}
+
+.vertical {
+  display: flex;
+  align-items: center;
+  &-inline {
+    display: inline-flex;
   }
 }
 

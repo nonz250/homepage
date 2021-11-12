@@ -71,7 +71,6 @@ export default {
 .bubble-image {
   position: absolute;
   transition:all .25s linear;
-  z-index: 200;
 }
 
 .top {

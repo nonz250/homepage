@@ -1,7 +1,15 @@
 <template>
   <div class="v-Work">
+    <p class="vertical-inline">
+      <anchor :link="link" class="mr-1">
+        {{ name }}
+      </anchor>
+      <span v-if="attention.length" class="attention vertical-inline">
+        <span class="material-icons-outlined">flag</span>
+        <span>{{ attention }}</span>
+      </span>
+    </p>
     <anchor :link="link">
-      <p>{{ name }}</p>
       <img :src="imagePath" alt="" class="image">
     </anchor>
   </div>
@@ -25,6 +33,10 @@ export default {
     name: {
       type: String,
       required: true
+    },
+    attention: {
+      type: String,
+      default: ''
     }
   }
 }
@@ -41,5 +53,12 @@ export default {
 
 .image {
   width: 100%;
+}
+
+.attention {
+  display: flex;
+  align-items: flex-end;
+  font-size: .8rem;
+  color: $red;
 }
 </style>
