@@ -104,9 +104,10 @@
             <p>フレームワークは問いませんが、Laravel / Vue.js / Nuxt.js ならよりスムースに事が進みます。</p>
             <p>設計には十分注意して開発するように心がけております。習得技術についてはご相談時にご確認ください。</p>
             <p>開発支援だけでなく、アプリ制作も承っております。</p>
+            <p>ご依頼は直接DMで承っております。</p>
             <p>
-              <anchor link="https://coconala.com/services/1657709">
-                ココナラで依頼する
+              <anchor link="mailto:hosaka.non.work@gmail.com">
+                hosaka.non.work@gmail.com
               </anchor>
             </p>
           </service>
@@ -120,10 +121,17 @@
               <span class="material-icons-outlined trend">
                 trending_up
               </span>
+              &nbsp;&nbsp;<anchor link="https://coconala.com/users/1484531/reviews">
+                過去の評価はこちら
+              </anchor>
+              <br>
             </p>
             <p>
-              <anchor link="https://coconala.com/services/1657709">
-                ココナラで依頼する
+              <small>※現在、ココナラでの出品を取りやめております。</small>
+            </p>
+            <p>
+              <anchor link="mailto:hosaka.non.work@gmail.com">
+                hosaka.non.work@gmail.com
               </anchor>
             </p>
           </service>
