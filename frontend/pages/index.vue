@@ -143,13 +143,13 @@
       <section id="works" class="section content pt-1">
         <h2>Works</h2>
         <div class="works">
-          <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.png" link="https://developers.smaregi.jp/" />
-          <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.jpg" link="https://apps.smaregi.jp/" />
-          <work name="スマレジ・POS" image-path="images/smaregi.png" link="https://smaregi.jp/" />
-          <work name="Revolver" image-path="images/revolver.png" link="https://revolver.biz/" />
-          <work name="のんラボ" image-path="images/nons-labo.png" link="https://labo.nozomi.bike/" attention="私の自作ブログです。" />
-          <work name="今年の抱負メーカー" image-path="images/ambition.png" link="https://ambition.nozomi.bike/" />
-          <work name="旧: Nozomi Hosaka" image-path="images/old_portfolio.png" link="https://portfolio.nozomi.bike/" />
+          <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.webp" link="https://developers.smaregi.jp/" />
+          <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.webp" link="https://apps.smaregi.jp/" />
+          <work name="スマレジ・POS" image-path="images/smaregi.webp" link="https://smaregi.jp/" />
+          <work name="Revolver" image-path="images/revolver.webp" link="https://revolver.biz/" />
+          <work name="のんラボ" image-path="images/nons-labo.webp" link="https://labo.nozomi.bike/" attention="私の自作ブログです。" />
+          <work name="今年の抱負メーカー" image-path="images/ambition.webp" link="https://ambition.nozomi.bike/" />
+          <work name="旧: Nozomi Hosaka" image-path="images/old_portfolio.webp" link="https://portfolio.nozomi.bike/" />
         </div>
       </section>
     </div>

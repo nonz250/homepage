@@ -1,8 +1,8 @@
 <template>
   <div class="v-ProfileImages" @click="click">
     <my-face />
-    <mini-image src="images/z250.jpg" class="bubble-image" :class="z250Class" />
-    <mini-image src="images/small_me.jpg" class="bubble-image" :class="smallMeClass" />
+    <mini-image src="images/valcans.webp" class="bubble-image" :class="z250Class" />
+    <mini-image src="images/small_me.webp" class="bubble-image" :class="smallMeClass" />
   </div>
 </template>
 

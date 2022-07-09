@@ -1,6 +1,6 @@
 <template>
   <div class="v-MyFace">
-    <img class="image" src="images/face.jpg" alt="">
+    <img class="image" src="images/face.webp" alt="">
   </div>
 </template>
 
