@@ -66,12 +66,16 @@
 
         <div class="profile-description">
           <p>
-            💼&nbsp;&nbsp;<anchor link="https://corp.smaregi.jp/">
-              Smaregi,Inc.
+            💼&nbsp;&nbsp;<anchor link="https://binc.jp/">
+              BASE, Inc.
+            </anchor>
+            /
+            <anchor link="https://pay.co.jp/">
+              PAY, Inc.
             </anchor>
           </p>
-          <p>🔧&nbsp;&nbsp;Web Application Engineer (PHPer)</p>
-          <p>✍&nbsp;&nbsp;PHP / Laravel / CakePHP / JavaScript / Vue.js / Nuxt.js / etc ...</p>
+          <p>🔧&nbsp;&nbsp;Web Application Engineer</p>
+          <p>✍&nbsp;&nbsp;Python / PHP / Laravel / CakePHP / JavaScript / Vue.js / Nuxt.js / etc ...</p>
           <p>🏍&nbsp;&nbsp;VULCAN S / Z250</p>
           <p>🎾&nbsp;&nbsp;Tennis</p>
         </div>
@@ -81,7 +85,15 @@
           <anchor link="https://corp.smaregi.jp/">
             Smaregi,Inc.
           </anchor>
-          にて活動中。普段はPHPを用いたバックエンドを中心に、Vue.js / Nuxt.jsによるフロントエンドも担当。
+          にてPHPを用いたバックエンドを中心に、Vue.js / Nuxt.jsによるフロントエンドも担当。その後、
+          <anchor link="https://binc.jp/">
+            BASE, Inc.
+          </anchor>
+          /
+          <anchor link="https://pay.co.jp/">
+            PAY, Inc.
+          </anchor>
+          にてPythonによる決済関係のバックエンドに従事。
         </p>
         <p>
           個人では自作アプリ制作、副業でもアプリ開発やメンター活動などを行っており、日常的にプログラミングに携わっています。<br>
@@ -143,6 +155,7 @@
       <section id="works" class="section content pt-1">
         <h2>Works</h2>
         <div class="works">
+          <work name="PAY.JP" image-path="images/payjp.webp" link="https://developers.smaregi.jp/" />
           <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.webp" link="https://developers.smaregi.jp/" />
           <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.webp" link="https://apps.smaregi.jp/" />
           <work name="スマレジ・POS" image-path="images/smaregi.webp" link="https://smaregi.jp/" />
