@@ -155,7 +155,7 @@
       <section id="works" class="section content pt-1">
         <h2>Works</h2>
         <div class="works">
-          <work name="PAY.JP" image-path="images/payjp.webp" link="https://developers.smaregi.jp/" />
+          <work name="PAY.JP" image-path="images/payjp.webp" link="https://pay.jp/" />
           <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.webp" link="https://developers.smaregi.jp/" />
           <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.webp" link="https://apps.smaregi.jp/" />
           <work name="スマレジ・POS" image-path="images/smaregi.webp" link="https://smaregi.jp/" />
