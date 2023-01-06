@@ -4,10 +4,8 @@
   </footer>
 </template>
 
-<script>
-export default {
-  name: 'TheFooter'
-}
+<script setup lang="ts">
+
 </script>
 
 <style scoped lang="scss">

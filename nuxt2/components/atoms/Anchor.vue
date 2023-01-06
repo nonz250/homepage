@@ -11,33 +11,47 @@
   </a>
 </template>
 
-<script setup lang="ts">
-const props = withDefaults(defineProps<{
-  link: string,
-  shine?: boolean
-}>(), {
-  shine: true
-})
-
-const active = ref<boolean>(false)
-
-const isActive = computed((): boolean => {
-  return !props.shine ? false : active.value
-})
-
-watch(active, (value) => {
-  if (value) {
-    setTimeout(() => {
-      active.value = false
-    }, 500)
+<script>
+export default {
+  name: 'Anchor',
+  props: {
+    link: {
+      type: String,
+      required: true
+    },
+    shine: {
+      type: Boolean,
+      default: true
+    }
+  },
+  data () {
+    return {
+      active: false
+    }
+  },
+  computed: {
+    isActive () {
+      if (!this.shine) {
+        return false
+      }
+      return this.active
+    }
+  },
+  watch: {
+    active (value) {
+      if (value) {
+        setTimeout(() => {
+          this.active = false
+        }, 500)
+      }
+    }
+  },
+  mounted () {
+    setInterval(() => {
+      this.active = true
+    }, 3000)
   }
-})
-
-onMounted(() => {
-  setInterval(() => {
-    active.value = true
-  }, 3000)
-})
+}
 </script>
 
 <style scoped lang="scss">

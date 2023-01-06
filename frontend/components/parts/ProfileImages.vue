@@ -1,64 +1,61 @@
 <template>
   <div class="v-ProfileImages" @click="click">
     <my-face />
-    <mini-image src="images/valcans.webp" class="bubble-image" :class="z250Class" />
-    <mini-image src="images/small_me.webp" class="bubble-image" :class="smallMeClass" />
+    <mini-image src="/images/valcans.webp" class="bubble-image" :class="z250Class" />
+    <mini-image src="/images/small_me.webp" class="bubble-image" :class="smallMeClass" />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import MyFace from '~/components/atoms/MyFace'
 import MiniImage from '~/components/atoms/MiniImage'
 
-export default {
-  name: 'ProfileImages',
-  components: { MiniImage, MyFace },
-  data () {
-    return {
-      moving: false,
-      z250: {
-        top: true,
-        left: true
-      },
-      smallMe: {
-        top: false,
-        left: false
-      }
-    }
-  },
-  computed: {
-    z250Class () {
-      return {
-        top: this.z250.top,
-        right: !this.z250.left,
-        bottom: !this.z250.top,
-        left: this.z250.left
-      }
-    },
-    smallMeClass () {
-      return {
-        top: this.smallMe.top,
-        right: !this.smallMe.left,
-        bottom: !this.smallMe.top,
-        left: this.smallMe.left
-      }
-    }
-  },
-  methods: {
-    click () {
-      if (this.moving) {
-        return
-      }
-      this.moving = true
-      this.z250.left = !this.z250.left
-      this.smallMe.left = !this.smallMe.left
-      setTimeout(() => {
-        this.z250.top = !this.z250.top
-        this.smallMe.top = !this.smallMe.top
-        this.moving = false
-      }, 250)
-    }
+const moving = ref<boolean>(false)
+const z250 = ref<{
+  top: boolean,
+  left: boolean
+}>({
+  top: true,
+  left: true
+})
+const smallMe = ref<{
+  top: boolean,
+  left: boolean
+}>({
+  top: false,
+  left: false
+})
+
+const z250Class = computed(() => {
+  return {
+    top: z250.value.top,
+    right: !z250.value.left,
+    bottom: !z250.value.top,
+    left: z250.value.left
   }
+})
+
+const smallMeClass = computed(() => {
+  return {
+    top: smallMe.value.top,
+    right: !smallMe.value.left,
+    bottom: !smallMe.value.top,
+    left: smallMe.value.left
+  }
+})
+
+const click = () => {
+  if (moving.value) {
+    return
+  }
+  moving.value = true
+  z250.value.left = !z250.value.left
+  smallMe.value.left = !smallMe.value.left
+  setTimeout(() => {
+    z250.value.top = !z250.value.top
+    smallMe.value.top = !smallMe.value.top
+    moving.value = false
+  }, 250)
 }
 </script>
 

@@ -2,13 +2,16 @@
   <div>
     <the-header />
     <main>
-      <slot />
+      <Nuxt />
     </main>
     <the-footer />
   </div>
 </template>
-
-<script setup lang="ts">
+<script>
 import TheHeader from '~/components/TheHeader'
 import TheFooter from '~/components/TheFooter'
+
+export default {
+  components: { TheFooter, TheHeader }
+}
 </script>

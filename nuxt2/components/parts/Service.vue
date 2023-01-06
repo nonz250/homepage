@@ -14,11 +14,20 @@
   </div>
 </template>
 
-<script setup lang="ts">
-defineProps<{
-  title: string,
-  icon: string
-}>()
+<script>
+export default {
+  name: 'Service',
+  props: {
+    title: {
+      type: String,
+      required: true
+    },
+    icon: {
+      type: String,
+      required: true
+    }
+  }
+}
 </script>
 
 <style scoped lang="scss">

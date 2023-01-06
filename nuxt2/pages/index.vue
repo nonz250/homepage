@@ -3,7 +3,7 @@
     <div class="graph">
       <div class="profile-container content">
         <div class="profile-image-container">
-           <profile-images />
+          <profile-images />
         </div>
         <div class="profile-messages-container">
           <div class="profile-messages">
@@ -184,7 +184,7 @@
           </p>
 
           <anchor link="https://twitter.com/nonz250" :shine="false">
-            <font-awesome-icon icon="fa-brands fa-twitter" class="sns-icon twitter" />
+            <font-awesome-icon :icon="['fab', 'twitter']" class="sns-icon twitter" />
           </anchor>
 
           <anchor link="mailto:hosaka.non.work@gmail.com">
@@ -196,59 +196,58 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import Anchor from "~/components/atoms/Anchor";
+<script>
+import Anchor from '~/components/atoms/Anchor'
 import ProfileImages from '~/components/parts/ProfileImages'
-import Service from '~/components/parts/Service'
 import Work from '~/components/parts/Work'
-import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import Service from '~/components/parts/Service'
+import scrollMixin from '~/mixins/scrollMixin'
+import mixin from '~/mixins/mixin'
 
-const currentScrollY = ref<number>(0)
-
-const setCurrentScrollPositionY = () => {
-  currentScrollY.value = window.scrollY
-}
-
-const active1 = ref<boolean>(false)
-const active2 = ref<boolean>(false)
-const active3 = ref<boolean>(false)
-const contactActive = ref<boolean>(false)
-
-const runDrawUnderLine = () => {
-  setTimeout(() => {
-    active1.value = true
-    setTimeout(() => {
-      active2.value = true
+export default {
+  components: { Service, Work, ProfileImages, Anchor },
+  mixins: [mixin, scrollMixin],
+  data () {
+    return {
+      FPS: 60,
+      active1: false,
+      active2: false,
+      active3: false,
+      contactActive: false
+    }
+  },
+  mounted () {
+    this.runDrawUnderLine()
+    setInterval(() => {
+      this.resetUnderLine()
+      this.runDrawUnderLine()
+    }, 15000)
+    setInterval(() => {
+      this.setContactActive()
+    }, 1500)
+  },
+  methods: {
+    runDrawUnderLine () {
       setTimeout(() => {
-        active3.value = true
-      }, 2000)
-    }, 2000)
-  }, 1000)
+        this.active1 = true
+        setTimeout(() => {
+          this.active2 = true
+          setTimeout(() => {
+            this.active3 = true
+          }, 2000)
+        }, 2000)
+      }, 1000)
+    },
+    resetUnderLine () {
+      this.active1 = false
+      this.active2 = false
+      this.active3 = false
+    },
+    setContactActive () {
+      this.contactActive = this.currentScrollY >= document.body.scrollHeight - window.innerHeight
+    }
+  }
 }
-
-const resetUnderLine = () => {
-  active1.value = false
-  active2.value = false
-  active3.value = false
-}
-
-const setContactActive = () => {
-  contactActive.value = currentScrollY.value >= document.body.scrollHeight - window.innerHeight
-}
-
-onMounted(() => {
-  setCurrentScrollPositionY()
-  document.addEventListener('scroll', setCurrentScrollPositionY)
-
-  runDrawUnderLine()
-  setInterval(() => {
-    resetUnderLine()
-    runDrawUnderLine()
-  }, 15000)
-  setInterval(() => {
-    setContactActive()
-  }, 1500)
-})
 </script>
 
 <style scoped lang="scss">

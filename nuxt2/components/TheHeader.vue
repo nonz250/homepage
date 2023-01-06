@@ -39,32 +39,30 @@
   </header>
 </template>
 
-<script setup lang="ts">
-import Anchor from "~/components/atoms/Anchor.vue";
-import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+<script>
+import Anchor from '~/components/atoms/Anchor'
+import scrollMixin from '~/mixins/scrollMixin'
 
-const FPS60 = ref<number>(60)
-const SCROLL_TOP_POSITION = ref<number>(5)
-const currentScrollY = ref<number>(0)
-
-const setCurrentScrollPositionY = () => {
-  currentScrollY.value = window.scrollY
+export default {
+  name: 'TheHeader',
+  components: { Anchor },
+  mixins: [scrollMixin],
+  data () {
+    return {
+      hideScrollingActions: true
+    }
+  },
+  mounted () {
+    setInterval(() => {
+      this.setHideScrollingActions()
+    }, 1000 / this.FPS60)
+  },
+  methods: {
+    setHideScrollingActions () {
+      this.hideScrollingActions = this.currentScrollY <= this.SCROLL_TOP_POSITION
+    }
+  }
 }
-
-const hideScrollingActions = ref<boolean>(true)
-
-const setHideScrollingActions = () => {
-  hideScrollingActions.value = currentScrollY.value <= SCROLL_TOP_POSITION.value
-}
-
-onMounted(() => {
-  setCurrentScrollPositionY()
-  document.addEventListener('scroll', setCurrentScrollPositionY)
-
-  setInterval(() => {
-    setHideScrollingActions()
-  }, 1000 / FPS60.value)
-})
 </script>
 
 <style scoped lang="scss">
@@ -89,8 +87,6 @@ onMounted(() => {
   color: $lnk-black;
   font-weight: bold;
   font-size: 1.5rem;
-  text-decoration: none;
-  cursor: pointer;
   @media screen and (max-width: 600px) {
     font-size: 1rem;
   }

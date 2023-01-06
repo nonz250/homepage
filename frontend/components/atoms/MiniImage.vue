@@ -2,16 +2,10 @@
   <img class="v-MiniImage" :src="src" alt="">
 </template>
 
-<script>
-export default {
-  name: 'MiniImage',
-  props: {
-    src: {
-      type: String,
-      required: true
-    }
-  }
-}
+<script setup lang="ts">
+defineProps<{
+  src: string
+}>()
 </script>
 
 <style scoped lang="scss">

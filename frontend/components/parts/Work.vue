@@ -15,31 +15,16 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import Anchor from '~/components/atoms/Anchor'
-
-export default {
-  name: 'Work',
-  components: { Anchor },
-  props: {
-    imagePath: {
-      type: String,
-      required: true
-    },
-    link: {
-      type: String,
-      required: true
-    },
-    name: {
-      type: String,
-      required: true
-    },
-    attention: {
-      type: String,
-      default: ''
-    }
-  }
-}
+withDefaults(defineProps<{
+  imagePath: string,
+  link: string,
+  name: string,
+  attention?: string
+}>(), {
+  attention: ''
+})
 </script>
 
 <style scoped lang="scss">

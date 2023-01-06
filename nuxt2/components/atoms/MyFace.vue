@@ -1,10 +1,13 @@
 <template>
   <div class="v-MyFace">
-    <img class="image" src="/images/face.webp" alt="">
+    <img class="image" src="images/face.webp" alt="">
   </div>
 </template>
 
-<script setup lang="ts">
+<script>
+export default {
+  name: 'MyFace'
+}
 </script>
 
 <style scoped lang="scss">
