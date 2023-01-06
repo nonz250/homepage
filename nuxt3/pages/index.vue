@@ -202,53 +202,51 @@ import ProfileImages from '~/components/parts/ProfileImages'
 import Service from '~/components/parts/Service'
 import Work from '~/components/parts/Work'
 
-// import scrollMixin from '~/mixins/scrollMixin'
-// import mixin from '~/mixins/mixin'
+const currentScrollY = ref<number>(0)
 
-// export default {
-//   components: { Service, Work, ProfileImages, Anchor },
-//   mixins: [mixin, scrollMixin],
-//   data () {
-//     return {
-//       FPS: 60,
-//       active1: false,
-//       active2: false,
-//       active3: false,
-//       contactActive: false
-//     }
-//   },
-//   mounted () {
-//     this.runDrawUnderLine()
-//     setInterval(() => {
-//       this.resetUnderLine()
-//       this.runDrawUnderLine()
-//     }, 15000)
-//     setInterval(() => {
-//       this.setContactActive()
-//     }, 1500)
-//   },
-//   methods: {
-//     runDrawUnderLine () {
-//       setTimeout(() => {
-//         this.active1 = true
-//         setTimeout(() => {
-//           this.active2 = true
-//           setTimeout(() => {
-//             this.active3 = true
-//           }, 2000)
-//         }, 2000)
-//       }, 1000)
-//     },
-//     resetUnderLine () {
-//       this.active1 = false
-//       this.active2 = false
-//       this.active3 = false
-//     },
-//     setContactActive () {
-//       this.contactActive = this.currentScrollY >= document.body.scrollHeight - window.innerHeight
-//     }
-//   }
-// }
+const setCurrentScrollPositionY = () => {
+  currentScrollY.value = window.scrollY
+}
+
+const FPS = ref<number>(60)
+const active1 = ref<boolean>(false)
+const active2 = ref<boolean>(false)
+const active3 = ref<boolean>(false)
+const contactActive = ref<boolean>(false)
+
+const runDrawUnderLine = () => {
+  setTimeout(() => {
+    active1.value = true
+    setTimeout(() => {
+      active2.value = true
+      setTimeout(() => {
+        active3.value = true
+      }, 2000)
+    }, 2000)
+  }, 1000)
+}
+
+const resetUnderLine = () => {
+  active1.value = false
+  active2.value = false
+  active3.value = false
+}
+
+const setContactActive = () => {
+  contactActive.value = currentScrollY.value >= document.body.scrollHeight - window.innerHeight
+}
+
+onMounted(() => {
+  setCurrentScrollPositionY()
+  runDrawUnderLine()
+  setInterval(() => {
+    resetUnderLine()
+    runDrawUnderLine()
+  }, 15000)
+  setInterval(() => {
+    setContactActive()
+  }, 1500)
+})
 </script>
 
 <style scoped lang="scss">
