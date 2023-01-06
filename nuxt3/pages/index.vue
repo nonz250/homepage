@@ -3,7 +3,7 @@
     <div class="graph">
       <div class="profile-container content">
         <div class="profile-image-container">
-          <!-- <profile-images /> -->
+           <profile-images />
         </div>
         <div class="profile-messages-container">
           <div class="profile-messages">
@@ -198,9 +198,8 @@
 
 <script setup lang="ts">
 import Anchor from "~/components/atoms/Anchor.vue";
+import ProfileImages from '~/components/parts/ProfileImages.vue'
 
-
-// import ProfileImages from '~/components/parts/ProfileImages'
 // import Work from '~/components/parts/Work'
 // import Service from '~/components/parts/Service'
 // import scrollMixin from '~/mixins/scrollMixin'
