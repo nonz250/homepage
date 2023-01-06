@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import Anchor from "~/components/atoms/Anchor.vue";
+import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 
 const FPS60 = ref<number>(60)
 const SCROLL_TOP_POSITION = ref<number>(5)
