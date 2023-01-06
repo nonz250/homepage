@@ -14,7 +14,7 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
   link: string,
-  shine: boolean
+  shine?: boolean
 }>(), {
   shine: true
 })

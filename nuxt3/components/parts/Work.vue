@@ -21,7 +21,7 @@ withDefaults(defineProps<{
   imagePath: string,
   link: string,
   name: string,
-  attention: string
+  attention?: string
 }>(), {
   attention: ''
 })
