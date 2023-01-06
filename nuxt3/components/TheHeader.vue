@@ -3,21 +3,21 @@
     <div class="actions parallax-bg" :class="{ hide: !hideScrollingActions }">
       <div class="left" />
       <div class="center">
-<!--        <nuxt-link v-scroll-to="'#about'" class="actions-link mr-1" to>-->
-<!--          About-->
-<!--        </nuxt-link>-->
-<!--        <nuxt-link v-scroll-to="'#service'" class="actions-link mr-1" to>-->
-<!--          Service-->
-<!--        </nuxt-link>-->
-<!--        <nuxt-link v-scroll-to="'#works'" class="actions-link mr-1" to>-->
-<!--          Works-->
-<!--        </nuxt-link>-->
-<!--        <nuxt-link v-scroll-to="'#contact'" class="actions-link mr-1" to>-->
-<!--          Contact-->
-<!--        </nuxt-link>-->
-<!--        <anchor link="https://labo.nozomi.bike" :shine="false" class="actions-link">-->
-<!--          Blog-->
-<!--        </anchor>-->
+        <nuxt-link v-scroll-to="'#about'" class="actions-link mr-1" to>
+          About
+        </nuxt-link>
+        <nuxt-link v-scroll-to="'#service'" class="actions-link mr-1" to>
+          Service
+        </nuxt-link>
+        <nuxt-link v-scroll-to="'#works'" class="actions-link mr-1" to>
+          Works
+        </nuxt-link>
+        <nuxt-link v-scroll-to="'#contact'" class="actions-link mr-1" to>
+          Contact
+        </nuxt-link>
+        <anchor link="https://labo.nozomi.bike" :shine="false" class="actions-link">
+          Blog
+        </anchor>
       </div>
       <div class="right" />
     </div>
@@ -59,6 +59,8 @@ const setHideScrollingActions = () => {
 
 onMounted(() => {
   setCurrentScrollPositionY()
+  document.addEventListener('scroll', setCurrentScrollPositionY)
+
   setInterval(() => {
     setHideScrollingActions()
   }, 1000 / FPS60.value)
@@ -87,6 +89,8 @@ onMounted(() => {
   color: $lnk-black;
   font-weight: bold;
   font-size: 1.5rem;
+  text-decoration: none;
+  cursor: pointer;
   @media screen and (max-width: 600px) {
     font-size: 1rem;
   }
