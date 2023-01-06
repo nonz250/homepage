@@ -111,7 +111,7 @@
       <section id="service" class="section content pt-1">
         <h2>Service</h2>
         <div class="service-container">
-          <!-- <service title="プログラミング開発支援" icon="code">
+          <service title="プログラミング開発支援" icon="code">
             <p>PHP / JavaScript で開発のお手伝いをさせていただきます。</p>
             <p>フレームワークは問いませんが、Laravel / Vue.js / Nuxt.js ならよりスムースに事が進みます。</p>
             <p>設計には十分注意して開発するように心がけております。習得技術についてはご相談時にご確認ください。</p>
@@ -122,8 +122,8 @@
                 hosaka.non.work@gmail.com
               </anchor>
             </p>
-          </service> -->
-          <!-- <service title="プログラミングレクチャー" icon="menu_book">
+          </service>
+          <service title="プログラミングレクチャー" icon="menu_book">
             <p>PHP / JavaScript などのプログラミング言語の習得のお手伝いをさせていただきます。</p>
             <p>フレームワークは Laravel / Vue.js / Nuxt.js などを対象にしています。</p>
             <p>また、業務支援のためのGAS(Google App Script)や、お子様向けのScratchも承っております。</p>
@@ -146,7 +146,7 @@
                 hosaka.non.work@gmail.com
               </anchor>
             </p>
-          </service> -->
+          </service>
         </div>
       </section>
     </div>
@@ -197,11 +197,11 @@
 </template>
 
 <script setup lang="ts">
-import Anchor from "~/components/atoms/Anchor.vue";
-import ProfileImages from '~/components/parts/ProfileImages.vue'
+import Anchor from "~/components/atoms/Anchor";
+import ProfileImages from '~/components/parts/ProfileImages'
+import Service from '~/components/parts/Service'
 
 // import Work from '~/components/parts/Work'
-// import Service from '~/components/parts/Service'
 // import scrollMixin from '~/mixins/scrollMixin'
 // import mixin from '~/mixins/mixin'
 
