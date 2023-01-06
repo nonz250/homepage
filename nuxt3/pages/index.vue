@@ -184,7 +184,7 @@
           </p>
 
           <anchor link="https://twitter.com/nonz250" :shine="false">
-            <font-awesome-icon :icon="['fab', 'twitter']" class="sns-icon twitter" />
+            <font-awesome-icon icon="fa-brands fa-twitter" class="sns-icon twitter" />
           </anchor>
 
           <anchor link="mailto:hosaka.non.work@gmail.com">
@@ -201,6 +201,7 @@ import Anchor from "~/components/atoms/Anchor";
 import ProfileImages from '~/components/parts/ProfileImages'
 import Service from '~/components/parts/Service'
 import Work from '~/components/parts/Work'
+import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 
 const currentScrollY = ref<number>(0)
 
@@ -208,7 +209,6 @@ const setCurrentScrollPositionY = () => {
   currentScrollY.value = window.scrollY
 }
 
-const FPS = ref<number>(60)
 const active1 = ref<boolean>(false)
 const active2 = ref<boolean>(false)
 const active3 = ref<boolean>(false)
