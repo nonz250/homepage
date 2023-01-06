@@ -8,7 +8,7 @@
         <div class="profile-messages-container">
           <div class="profile-messages">
             <p>
-              <!-- <a
+              <a
                 href="#"
                 class="message hover-underline"
                 :class="{active: active1}"
@@ -16,10 +16,10 @@
                 @contextmenu.prevent=""
               >
                 何かを作ることがとても好きです。
-              </a> -->
+              </a>
             </p>
             <p>
-              <!-- <a
+              <a
                 href="#"
                 class="message hover-underline"
                 :class="{active: active2}"
@@ -27,10 +27,10 @@
                 @contextmenu.prevent=""
               >
                 私の制作物や技術で皆様を少しでも笑顔にしたり、楽にしたりすることで
-              </a> -->
+              </a>
             </p>
             <p>
-              <!-- <a
+              <a
                 href="#"
                 class="message hover-underline"
                 :class="{active: active3}"
@@ -38,7 +38,7 @@
                 @contextmenu.prevent=""
               >
                 より社会を豊かにできればと考え、日々精進して参ります。
-              </a> -->
+              </a>
             </p>
           </div>
         </div>
@@ -172,7 +172,7 @@
         <h2>Contact me</h2>
         <div class="contact-container">
           <p>
-            <!-- <a
+            <a
               href="#"
               class="hover-underline"
               :class="{active: contactActive}"
@@ -180,7 +180,7 @@
               @contextmenu.prevent=""
             >
               仕事のご依頼や、ご相談などはお気軽にお問い合わせくださいませ。
-            </a> -->
+            </a>
           </p>
 
           <anchor link="https://twitter.com/nonz250" :shine="false">
@@ -238,6 +238,8 @@ const setContactActive = () => {
 
 onMounted(() => {
   setCurrentScrollPositionY()
+  document.addEventListener('scroll', setCurrentScrollPositionY)
+
   runDrawUnderLine()
   setInterval(() => {
     resetUnderLine()
