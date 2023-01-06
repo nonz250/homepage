@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "material-icons": "^1.13.1",
-    "nuxt": "3.0.0"
+    "nuxt": "3.0.0",
+    "sass": "^1.57.1"
   }
 }
