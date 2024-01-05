@@ -59,7 +59,7 @@
               <font-awesome-icon :icon="['fab', 'github']" class="sns-icon github" />
             </anchor>
             <anchor link="https://twitter.com/nonz250" :shine="false">
-              <font-awesome-icon :icon="['fab', 'twitter']" class="sns-icon twitter" />
+              <font-awesome-icon :icon="['fab', 'x-twitter']" class="sns-icon twitter" />
             </anchor>
           </div>
         </div>
@@ -184,7 +184,7 @@
           </p>
 
           <anchor link="https://twitter.com/nonz250" :shine="false">
-            <font-awesome-icon icon="fa-brands fa-twitter" class="sns-icon twitter" />
+            <font-awesome-icon icon="fa-brands fa-x-twitter" class="sns-icon twitter" />
           </anchor>
 
           <anchor link="mailto:hosaka.non.work@gmail.com">
