@@ -1,12 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: false,
+
   css: [
     '@/assets/scss/app.scss',
     '@fortawesome/fontawesome-svg-core/styles.css',
     'material-icons/iconfont/material-icons.css',
     '@fontsource/noto-sans-jp/japanese.css',
   ],
+
   app: {
     head: {
       htmlAttrs: {
@@ -33,5 +35,7 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     },
-  }
+  },
+
+  compatibilityDate: '2024-09-20'
 })
