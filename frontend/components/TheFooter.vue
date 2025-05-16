@@ -9,14 +9,14 @@
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
 .v-Footer {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  color: $lnk-black;
-  background-color: $white;
+  color: color.$lnk-black;
+  background-color: color.$white;
   padding: 0 0 0 0 !important;
 }
 </style>

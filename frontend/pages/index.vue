@@ -252,7 +252,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
+@use "assets/scss/size";
 
 .profile-container {
   display: grid;
@@ -300,7 +301,7 @@ onMounted(() => {
     margin-top: 1rem;
     display: grid;
     gap: .5rem;
-    grid-template-columns: repeat(auto-fit, minmax($item-size, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(size.$item-size, 1fr));
 
     > p {
       margin: 0;
@@ -315,11 +316,11 @@ onMounted(() => {
     margin-right: .5rem;
 
     &.twitter {
-      color: $twitter-blue !important;
+      color: color.$twitter-blue !important;
     }
 
     &.github {
-      color: $black !important;
+      color: color.$black !important;
     }
   }
 
@@ -356,6 +357,6 @@ onMounted(() => {
 }
 
 .trend {
-  color: $red;
+  color: color.$red;
 }
 </style>

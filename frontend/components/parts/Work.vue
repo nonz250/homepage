@@ -28,10 +28,11 @@ withDefaults(defineProps<{
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
+@use "assets/scss/size";
 
 .v-Work {
-  width: $item-size;
+  width: size.$item-size;
   display: grid;
   align-items: center;
 }
@@ -44,6 +45,6 @@ withDefaults(defineProps<{
   display: flex;
   align-items: flex-end;
   font-size: .8rem;
-  color: $red;
+  color: color.$red;
 }
 </style>

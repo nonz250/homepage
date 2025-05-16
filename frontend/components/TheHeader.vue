@@ -68,7 +68,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
 
 .v-Header {
   position: fixed;
@@ -86,7 +86,7 @@ onMounted(() => {
 }
 
 .actions-link {
-  color: $lnk-black;
+  color: color.$lnk-black;
   font-weight: bold;
   font-size: 1.5rem;
   text-decoration: none;
@@ -124,7 +124,7 @@ onMounted(() => {
     margin-right: .5rem;
 
     &.github {
-      color: $black !important;
+      color: color.$black !important;
     }
   }
 }

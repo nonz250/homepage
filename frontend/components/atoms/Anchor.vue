@@ -41,11 +41,11 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
 
 .v-Anchor {
   position: relative;
-  color: $lnk-black;
+  color: color.$lnk-black;
   font-weight: bold;
 }
 
