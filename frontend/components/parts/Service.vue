@@ -22,10 +22,11 @@ defineProps<{
 </script>
 
 <style scoped lang="scss">
-@import "assets/scss/variables";
+@use "assets/scss/color";
+@use "assets/scss/size";
 
 .v-Service {
-  width: $item-size;
+  width: size.$item-size;
 }
 
 .icon {
@@ -43,7 +44,7 @@ defineProps<{
 }
 
 .tmp-link {
-  color: $lnk-black;
+  color: color.$lnk-black;
   font-weight: bold;
   text-align: center;
 }
