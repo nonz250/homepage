@@ -159,9 +159,10 @@
           <work name="スマレジ・デベロッパーズ" image-path="images/smaregi-developers.webp" link="https://developers.smaregi.jp/" />
           <work name="スマレジ・アプリマーケット" image-path="images/smaregi-app-market.webp" link="https://apps.smaregi.jp/" />
           <work name="スマレジ・POS" image-path="images/smaregi.webp" link="https://smaregi.jp/" />
-          <work name="Revolver" image-path="images/revolver.webp" link="https://revolver.biz/" />
           <work name="のんラボ" image-path="images/nons-labo.webp" link="https://labo.nozomi.bike/" attention="私の自作ブログです。" />
+          <work name="envas" image-path="images/envas.webp" link="https://envas.jp/" attention="2025/04/04 ローンチ。" />
           <work name="今年の抱負メーカー" image-path="images/ambition.webp" link="https://ambition.nozomi.bike/" />
+          <work name="Revolver" image-path="images/revolver.webp" link="https://revolver.biz/" />
           <work name="旧: Nozomi Hosaka" image-path="images/old_portfolio.webp" link="https://portfolio.nozomi.bike/" />
         </div>
       </section>
