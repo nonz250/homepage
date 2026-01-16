@@ -13,7 +13,7 @@
     "@fortawesome/free-brands-svg-icons": "^6.2.1",
     "@fortawesome/vue-fontawesome": "^3.0.2",
     "material-icons": "^1.13.1",
-    "nuxt": "^3.13.2",
+    "nuxt": "^3.19.0",
     "sass": "^1.57.1",
     "vue-scrollto": "^2.20.0"
   }
