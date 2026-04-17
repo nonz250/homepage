@@ -12,6 +12,8 @@
 </template>
 
 <script setup lang="ts">
+import { ANCHOR_ACTIVATION_INTERVAL_MS } from "~/constants/timing";
+
 const props = withDefaults(defineProps<{
   link: string,
   shine?: boolean
@@ -33,10 +35,19 @@ watch(active, (value) => {
   }
 })
 
+let activationIntervalId: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
-  setInterval(() => {
+  activationIntervalId = setInterval(() => {
     active.value = true
-  }, 3000)
+  }, ANCHOR_ACTIVATION_INTERVAL_MS)
+})
+
+onBeforeUnmount(() => {
+  if (activationIntervalId !== null) {
+    clearInterval(activationIntervalId)
+    activationIntervalId = null
+  }
 })
 </script>
 
