@@ -42,9 +42,12 @@
 <script setup lang="ts">
 import Anchor from "~/components/atoms/Anchor.vue";
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import {
+  HEADER_SCROLL_CHECK_FPS,
+  HEADER_SHRINK_THRESHOLD_PX,
+  MILLISECONDS_PER_SECOND,
+} from "~/constants/timing";
 
-const FPS60 = ref<number>(60)
-const SCROLL_TOP_POSITION = ref<number>(5)
 const currentScrollY = ref<number>(0)
 
 const setCurrentScrollPositionY = () => {
@@ -54,16 +57,26 @@ const setCurrentScrollPositionY = () => {
 const hideScrollingActions = ref<boolean>(true)
 
 const setHideScrollingActions = () => {
-  hideScrollingActions.value = currentScrollY.value <= SCROLL_TOP_POSITION.value
+  hideScrollingActions.value = currentScrollY.value <= HEADER_SHRINK_THRESHOLD_PX
 }
+
+let scrollCheckIntervalId: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   setCurrentScrollPositionY()
   document.addEventListener('scroll', setCurrentScrollPositionY)
 
-  setInterval(() => {
+  scrollCheckIntervalId = setInterval(() => {
     setHideScrollingActions()
-  }, 1000 / FPS60.value)
+  }, MILLISECONDS_PER_SECOND / HEADER_SCROLL_CHECK_FPS)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('scroll', setCurrentScrollPositionY)
+  if (scrollCheckIntervalId !== null) {
+    clearInterval(scrollCheckIntervalId)
+    scrollCheckIntervalId = null
+  }
 })
 </script>
 
