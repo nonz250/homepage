@@ -2,8 +2,8 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "dev": "cross-env CONTENT_PREVIEW=1 nuxt dev",
+    "generate": "cross-env CONTENT_PREVIEW= NODE_ENV=production nuxt generate",
     "preview": "nuxt preview",
     "prepare": "nuxt prepare",
     "test:unit": "vitest run --dir tests/unit",
