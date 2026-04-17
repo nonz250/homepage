@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
+import remarkZennImage from './utils/markdown/remarkZennImage'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
@@ -47,17 +48,20 @@ export default defineNuxtConfig({
   // Nuxt Content v3 のモジュールオプション。
   // remarkZennImage は Zenn 互換の `/images/...` 参照を
   // `/articles-images/...` に書き換える最小プラグイン (Phase 1)。
-  // `src` に絶対パスを渡すことで @nuxtjs/mdc の自動 import 経路から
-  // 直接モジュールを解決させる。
+  //
+  // `@nuxt/content` の parser は `instance` を優先し、未指定なら
+  // key 名 (`remark-zenn-image`) から dynamic import しようとする。
+  // `@nuxtjs/mdc` の mdc-imports 生成は `src` を見る。
+  // 両パイプラインを満たすため instance / src の両方を指定する。
   content: {
     build: {
       markdown: {
         remarkPlugins: {
           'remark-zenn-image': {
+            instance: remarkZennImage,
             src: REMARK_ZENN_IMAGE_PATH,
-            // remarkZennImage は options を取らないが、@nuxtjs/mdc の
-            // mdc-imports テンプレートが options 未指定の場合に plugin
-            // オブジェクト全体を渡してしまうため、空オブジェクトを明示する。
+            // @nuxtjs/mdc の mdc-imports テンプレートが options 未指定
+            // 時に plugin オブジェクト全体を渡してしまう挙動の回避。
             options: {},
           },
         },
