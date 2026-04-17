@@ -20,6 +20,14 @@ const __dirname = dirname(__filename)
 const ARTICLES_DIR = resolve(__dirname, '../articles')
 const ARTICLES_IMAGES_DIR = resolve(__dirname, '../articles/images')
 
+// 自作 remark プラグイン (Zenn 互換画像パス書き換え) の絶対パス。
+// @nuxtjs/mdc が生成する `mdc-imports.mjs` は `src` が指定されていれば
+// そこから import するため、package 解決に失敗する警告を避けられる。
+const REMARK_ZENN_IMAGE_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennImage.ts',
+)
+
 /** articles 画像を公開配信するパス */
 const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 
@@ -35,6 +43,27 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/content',
   ],
+
+  // Nuxt Content v3 のモジュールオプション。
+  // remarkZennImage は Zenn 互換の `/images/...` 参照を
+  // `/articles-images/...` に書き換える最小プラグイン (Phase 1)。
+  // `src` に絶対パスを渡すことで @nuxtjs/mdc の自動 import 経路から
+  // 直接モジュールを解決させる。
+  content: {
+    build: {
+      markdown: {
+        remarkPlugins: {
+          'remark-zenn-image': {
+            src: REMARK_ZENN_IMAGE_PATH,
+            // remarkZennImage は options を取らないが、@nuxtjs/mdc の
+            // mdc-imports テンプレートが options 未指定の場合に plugin
+            // オブジェクト全体を渡してしまうため、空オブジェクトを明示する。
+            options: {},
+          },
+        },
+      },
+    },
+  },
 
   runtimeConfig: {
     // サーバ/クライアントで共有されるプレビュー制御フラグ。
