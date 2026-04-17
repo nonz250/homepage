@@ -23,10 +23,18 @@ jobs:
         with:
           node-version: '22.x'
 
+      # postinstall 起点の任意コード実行リスクを避けるため `--ignore-scripts`
+      # を明示する。test.yml と同じ supply chain 対策を deploy にも適用。
       - name: Install Dependencies
-        run: |
-          npm ci
-          npm run generate
+        run: npm ci --ignore-scripts
+
+      # `nuxt prepare` は `.nuxt` 配下の型ファイルを生成する必須ステップ。
+      # `--ignore-scripts` で postinstall を skip した分をここで明示実行する。
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+
+      - name: Build (generate)
+        run: npm run generate
 
       - name: Assert no drafts in build output
         working-directory: ${{ github.workspace }}
