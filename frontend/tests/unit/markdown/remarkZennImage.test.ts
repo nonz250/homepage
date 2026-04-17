@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
-import remarkZennImage from '../../../utils/markdown/remarkZennImage'
+import remarkZennImage, {
+  FORBIDDEN_IMAGE_URL_ERROR_PREFIX,
+} from '../../../utils/markdown/remarkZennImage'
 
 /**
  * `remarkZennImage` の単体テスト。
  *
  * Phase 1 スコープ (`/images/...` → `/articles-images/...`) の境界を
- * 明示的に検証する。data URL や絶対 URL はここでは素通しとし、Phase 2
- * で sanitize を強化する設計。
+ * 明示的に検証する。`data:` URL と `//` プロトコル相対 URL は fail-closed
+ * の方針でビルドエラーを throw する。絶対 URL (`http://`, `https://`) と
+ * 相対パス (`./`, `../`) は素通しし、path traversal の厳格化は Phase 2
+ * の sanitize 強化で扱う。
  *
  * テストでは unified + remark-parse/stringify を用いて Markdown 入出力の
  * ラウンドトリップを検証する。プラグイン関数が mdast を in-place で編集する
@@ -70,27 +74,18 @@ describe('remarkZennImage', () => {
       expect(out).toContain('http://example.com/a.png')
     })
 
-    it('does not rewrite protocol-relative URLs', () => {
-      const out = processMarkdown('![](//cdn.example.com/a.png)\n')
-      expect(out).toContain('//cdn.example.com/a.png')
-    })
-
     it('does not rewrite relative ./ paths', () => {
       const out = processMarkdown('![](./relative.png)\n')
       expect(out).toContain('./relative.png')
       expect(out).not.toContain('/articles-images/relative.png')
     })
 
-    it('does not rewrite relative ../ paths', () => {
+    it('does not rewrite relative ../ paths (Phase 1 scope)', () => {
+      // path traversal のような見た目でも、Phase 1 では remark レベルで素通し。
+      // build artifact 側のホスト検査 (assert-no-external-images.sh) が
+      // 外部流出を遮断しており、厳格化は Phase 2 sanitize で扱う。
       const out = processMarkdown('![](../up/pic.png)\n')
       expect(out).toContain('../up/pic.png')
-    })
-
-    it('passes through data: URLs (Phase 1 scope)', () => {
-      const out = processMarkdown(
-        '![](data:image/png;base64,iVBORw0KGgo=)\n',
-      )
-      expect(out).toContain('data:image/png;base64,iVBORw0KGgo=')
     })
 
     it('does not crash on an empty URL', () => {
@@ -101,6 +96,26 @@ describe('remarkZennImage', () => {
       const out = processMarkdown('[link](/images/foo.png)\n')
       expect(out).toContain('/images/foo.png')
       expect(out).not.toContain('/articles-images/foo.png')
+    })
+  })
+
+  describe('forbidden URL prefixes (fail-closed)', () => {
+    it('throws when a data: URL is used as an image source', () => {
+      expect(() =>
+        processMarkdown('![](data:image/png;base64,iVBORw0KGgo=)\n'),
+      ).toThrowError(FORBIDDEN_IMAGE_URL_ERROR_PREFIX)
+    })
+
+    it('throws for protocol-relative URLs (//host/path)', () => {
+      expect(() =>
+        processMarkdown('![](//evil.example.com/a.png)\n'),
+      ).toThrowError(FORBIDDEN_IMAGE_URL_ERROR_PREFIX)
+    })
+
+    it('includes the offending URL in the error message', () => {
+      expect(() =>
+        processMarkdown('![](//cdn.example.com/a.png)\n'),
+      ).toThrowError(/\/\/cdn\.example\.com\/a\.png/)
     })
   })
 
