@@ -10,7 +10,8 @@
 #
 # 許可パターン:
 #   - 相対パス (src="/..." や src="images/...") は検査対象外
-#   - http(s):// で始まる URL のホスト部分を抽出し、許可リストと照合
+#   - http(s):// もしくは // (プロトコル相対) で始まる URL のホスト部分を
+#     抽出し、許可リストと照合
 #
 # ヒットしたら exit 1 でデプロイ前ゲートを落とす。
 
@@ -63,9 +64,16 @@ is_allowed_host() {
 #   - <meta property="og:image" content="https://..." />
 #   - <meta content="https://..." property="og:image" />
 # <img src="https://..."> も対象。
-readonly IMG_SRC_RE='<img[^>]+src=["'"'"']https?://[^"'"'"' >]+'
-readonly OG_IMAGE_CONTENT_FIRST_RE='<meta[^>]+(property|name)=["'"'"']og:image["'"'"'][^>]+content=["'"'"']https?://[^"'"'"' >]+'
-readonly OG_IMAGE_CONTENT_LAST_RE='<meta[^>]+content=["'"'"']https?://[^"'"'"' >]+["'"'"'][^>]+(property|name)=["'"'"']og:image["'"'"']'
+#
+# スキームは次の 3 形式を許容する:
+#   - http://HOST/...
+#   - https://HOST/...
+#   - //HOST/... (プロトコル相対 URL。例: <img src="//evil.com/a.png">)
+# URL 抽出側では `(https?:)?//` でグルーピングする。
+readonly URL_PATTERN='(https?:)?//[^"'"'"' >]+'
+readonly IMG_SRC_RE='<img[^>]+src=["'"'"']'"${URL_PATTERN}"
+readonly OG_IMAGE_CONTENT_FIRST_RE='<meta[^>]+(property|name)=["'"'"']og:image["'"'"'][^>]+content=["'"'"']'"${URL_PATTERN}"
+readonly OG_IMAGE_CONTENT_LAST_RE='<meta[^>]+content=["'"'"']'"${URL_PATTERN}"'["'"'"'][^>]+(property|name)=["'"'"']og:image["'"'"']'
 
 leaked=0
 
@@ -82,12 +90,13 @@ while IFS= read -r file; do
   while IFS= read -r hit; do
     [[ -z "${hit}" ]] && continue
 
-    # hit 文字列から URL を切り出す。最後の https?:// 以降を採用する。
-    url="$(printf '%s' "${hit}" | grep -E -o 'https?://[^"'"'"' >]+' | tail -n 1 || true)"
+    # hit 文字列から URL を切り出す。最後の "(https?:)?//" 以降を採用する。
+    # プロトコル相対 URL (`//host/...`) もここで捕捉する。
+    url="$(printf '%s' "${hit}" | grep -E -o "${URL_PATTERN}" | tail -n 1 || true)"
     [[ -z "${url}" ]] && continue
 
-    # スキーム後のホスト部分を抽出する: https://HOST/...
-    host="$(printf '%s' "${url}" | sed -E 's|^https?://([^/"'"'"']+).*|\1|')"
+    # スキーム後のホスト部分を抽出する: https://HOST/... または //HOST/...
+    host="$(printf '%s' "${url}" | sed -E 's|^(https?:)?//([^/"'"'"']+).*|\2|')"
     [[ -z "${host}" ]] && continue
 
     if ! is_allowed_host "${host}"; then
