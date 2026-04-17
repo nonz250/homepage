@@ -203,6 +203,12 @@ import ProfileImages from '~/components/parts/ProfileImages'
 import Service from '~/components/parts/Service'
 import Work from '~/components/parts/Work'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import {
+  CONTACT_ACTIVE_CHECK_INTERVAL_MS,
+  UNDERLINE_DRAW_INITIAL_DELAY_MS,
+  UNDERLINE_DRAW_STEP_DELAY_MS,
+  UNDERLINE_REDRAW_INTERVAL_MS,
+} from "~/constants/timing";
 
 const currentScrollY = ref<number>(0)
 
@@ -222,9 +228,9 @@ const runDrawUnderLine = () => {
       active2.value = true
       setTimeout(() => {
         active3.value = true
-      }, 2000)
-    }, 2000)
-  }, 1000)
+      }, UNDERLINE_DRAW_STEP_DELAY_MS)
+    }, UNDERLINE_DRAW_STEP_DELAY_MS)
+  }, UNDERLINE_DRAW_INITIAL_DELAY_MS)
 }
 
 const resetUnderLine = () => {
@@ -237,18 +243,33 @@ const setContactActive = () => {
   contactActive.value = currentScrollY.value >= document.body.scrollHeight - window.innerHeight
 }
 
+let underlineRedrawIntervalId: ReturnType<typeof setInterval> | null = null
+let contactActiveCheckIntervalId: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   setCurrentScrollPositionY()
   document.addEventListener('scroll', setCurrentScrollPositionY)
 
   runDrawUnderLine()
-  setInterval(() => {
+  underlineRedrawIntervalId = setInterval(() => {
     resetUnderLine()
     runDrawUnderLine()
-  }, 15000)
-  setInterval(() => {
+  }, UNDERLINE_REDRAW_INTERVAL_MS)
+  contactActiveCheckIntervalId = setInterval(() => {
     setContactActive()
-  }, 1500)
+  }, CONTACT_ACTIVE_CHECK_INTERVAL_MS)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('scroll', setCurrentScrollPositionY)
+  if (underlineRedrawIntervalId !== null) {
+    clearInterval(underlineRedrawIntervalId)
+    underlineRedrawIntervalId = null
+  }
+  if (contactActiveCheckIntervalId !== null) {
+    clearInterval(contactActiveCheckIntervalId)
+    contactActiveCheckIntervalId = null
+  }
 })
 </script>
 
