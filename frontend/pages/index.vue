@@ -169,6 +169,27 @@
     </div>
 
     <div class="graph">
+      <section id="articles" class="section content pt-1">
+        <h2>Latest Articles</h2>
+        <div v-if="latestArticles.length > 0" class="articles">
+          <article-card
+            v-for="article in latestArticles"
+            :key="article.slug"
+            :article="article"
+          />
+        </div>
+        <p v-else class="articles-empty">
+          まだ記事がありません。
+        </p>
+        <p class="articles-footer">
+          <nuxt-link to="/articles" class="all-articles-link">
+            All Articles →
+          </nuxt-link>
+        </p>
+      </section>
+    </div>
+
+    <div class="graph">
       <section id="contact" class="section content">
         <h2>Contact me</h2>
         <div class="contact-container">
@@ -199,16 +220,28 @@
 
 <script setup lang="ts">
 import Anchor from "~/components/atoms/Anchor";
+import ArticleCard from "~/components/parts/ArticleCard.vue";
 import ProfileImages from '~/components/parts/ProfileImages'
 import Service from '~/components/parts/Service'
 import Work from '~/components/parts/Work'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import { useArticles } from "~/composables/useArticles";
+import { useContentPreview } from "~/composables/useContentPreview";
+import { INDEX_LATEST_ARTICLES_LIMIT } from "~/constants/article";
 import {
   CONTACT_ACTIVE_CHECK_INTERVAL_MS,
   UNDERLINE_DRAW_INITIAL_DELAY_MS,
   UNDERLINE_DRAW_STEP_DELAY_MS,
   UNDERLINE_REDRAW_INTERVAL_MS,
 } from "~/constants/timing";
+
+// 最新記事セクション用。preview でない本番ビルドでは useArticles が
+// 可視性フィルタ済みの公開記事だけを返し、降順 (新着順) で並ぶ。
+const preview = useContentPreview()
+const latestArticles = await useArticles({
+  preview,
+  limit: INDEX_LATEST_ARTICLES_LIMIT,
+})
 
 const currentScrollY = ref<number>(0)
 
@@ -385,6 +418,33 @@ onBeforeUnmount(() => {
     gap: 2rem;
     grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
     justify-items: center;
+  }
+
+  > .articles {
+    padding-bottom: 1rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  }
+
+  > .articles-empty {
+    color: color.$lnk-black;
+  }
+
+  > .articles-footer {
+    margin: 0;
+    padding: 0 0 2rem 0;
+    text-align: right;
+
+    > .all-articles-link {
+      color: color.$lnk-black;
+      font-weight: bold;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 
   > .contact-container {
