@@ -176,6 +176,7 @@
             v-for="article in latestArticles"
             :key="article.slug"
             :article="article"
+            :is-draft="preview && !article.published"
           />
         </div>
         <p v-else class="articles-empty">
