@@ -25,6 +25,7 @@
     "cross-env": "^10.1.0",
     "gray-matter": "^4.0.3",
     "happy-dom": "^20.9.0",
+    "http-server": "^14.1.1",
     "material-icons": "^1.13.1",
     "nuxt": "^3.19.0",
     "sass": "^1.57.1",
