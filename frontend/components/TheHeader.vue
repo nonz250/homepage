@@ -3,16 +3,16 @@
     <div class="actions parallax-bg" :class="{ hide: !hideScrollingActions }">
       <div class="left" />
       <div class="center">
-        <nuxt-link v-scroll-to="'#about'" class="actions-link mr-1" to>
+        <nuxt-link to="/#about" class="actions-link mr-1">
           About
         </nuxt-link>
-        <nuxt-link v-scroll-to="'#service'" class="actions-link mr-1" to>
+        <nuxt-link to="/#service" class="actions-link mr-1">
           Service
         </nuxt-link>
-        <nuxt-link v-scroll-to="'#works'" class="actions-link mr-1" to>
+        <nuxt-link to="/#works" class="actions-link mr-1">
           Works
         </nuxt-link>
-        <nuxt-link v-scroll-to="'#contact'" class="actions-link mr-1" to>
+        <nuxt-link to="/#contact" class="actions-link mr-1">
           Contact
         </nuxt-link>
         <anchor link="https://labo.nozomi.bike" :shine="false" class="actions-link">
