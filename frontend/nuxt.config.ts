@@ -4,6 +4,10 @@ export default defineNuxtConfig({
   // Nuxt 3 のデフォルトは true だが、設計 v4 の 6.3 節に従って明示する。
   ssr: true,
 
+  modules: [
+    '@nuxt/content',
+  ],
+
   css: [
     '@/assets/scss/app.scss',
     '@fortawesome/fontawesome-svg-core/styles.css',
