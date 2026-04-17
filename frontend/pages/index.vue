@@ -221,12 +221,23 @@ const active2 = ref<boolean>(false)
 const active3 = ref<boolean>(false)
 const contactActive = ref<boolean>(false)
 
+const pendingTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
+
+const scheduleTimeout = (fn: () => void, ms: number): ReturnType<typeof setTimeout> => {
+  const id = setTimeout(() => {
+    pendingTimeoutIds.delete(id)
+    fn()
+  }, ms)
+  pendingTimeoutIds.add(id)
+  return id
+}
+
 const runDrawUnderLine = () => {
-  setTimeout(() => {
+  scheduleTimeout(() => {
     active1.value = true
-    setTimeout(() => {
+    scheduleTimeout(() => {
       active2.value = true
-      setTimeout(() => {
+      scheduleTimeout(() => {
         active3.value = true
       }, UNDERLINE_DRAW_STEP_DELAY_MS)
     }, UNDERLINE_DRAW_STEP_DELAY_MS)
@@ -270,6 +281,8 @@ onBeforeUnmount(() => {
     clearInterval(contactActiveCheckIntervalId)
     contactActiveCheckIntervalId = null
   }
+  pendingTimeoutIds.forEach(clearTimeout)
+  pendingTimeoutIds.clear()
 })
 </script>
 
