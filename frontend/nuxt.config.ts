@@ -1,5 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // SSG (prerender) を有効化するため、SSR を明示的に true に設定する。
+  // Nuxt 3 のデフォルトは true だが、設計 v4 の 6.3 節に従って明示する。
+  ssr: true,
+
   css: [
     '@/assets/scss/app.scss',
     '@fortawesome/fontawesome-svg-core/styles.css',
