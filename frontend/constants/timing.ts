@@ -17,6 +17,9 @@ export const MILLISECONDS_PER_SECOND = 1000
 /** Anchor コンポーネントの shine アニメーション再起動間隔（ms） */
 export const ANCHOR_ACTIVATION_INTERVAL_MS = 3000
 
+/** Anchor の active 状態を自動解除するまでの持続時間（ms） */
+export const ANCHOR_SHINE_ACTIVE_DURATION_MS = 500
+
 /** プロフィールメッセージの下線描画を開始するまでの初回遅延（ms） */
 export const UNDERLINE_DRAW_INITIAL_DELAY_MS = 1000
 

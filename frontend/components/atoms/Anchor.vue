@@ -12,7 +12,10 @@
 </template>
 
 <script setup lang="ts">
-import { ANCHOR_ACTIVATION_INTERVAL_MS } from "~/constants/timing";
+import {
+  ANCHOR_ACTIVATION_INTERVAL_MS,
+  ANCHOR_SHINE_ACTIVE_DURATION_MS,
+} from "~/constants/timing";
 
 const props = withDefaults(defineProps<{
   link: string,
@@ -27,11 +30,20 @@ const isActive = computed((): boolean => {
   return !props.shine ? false : active.value
 })
 
+let shineResetTimeoutId: ReturnType<typeof setTimeout> | null = null
+
 watch(active, (value) => {
+  // watch 再発火時には前回の timeout をクリアしてから新規発行することで、
+  // 古い値での多重発火（先行する false 書き換え）を防止する。
+  if (shineResetTimeoutId !== null) {
+    clearTimeout(shineResetTimeoutId)
+    shineResetTimeoutId = null
+  }
   if (value) {
-    setTimeout(() => {
+    shineResetTimeoutId = setTimeout(() => {
       active.value = false
-    }, 500)
+      shineResetTimeoutId = null
+    }, ANCHOR_SHINE_ACTIVE_DURATION_MS)
   }
 })
 
@@ -47,6 +59,10 @@ onBeforeUnmount(() => {
   if (activationIntervalId !== null) {
     clearInterval(activationIntervalId)
     activationIntervalId = null
+  }
+  if (shineResetTimeoutId !== null) {
+    clearTimeout(shineResetTimeoutId)
+    shineResetTimeoutId = null
   }
 })
 </script>
