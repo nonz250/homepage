@@ -394,13 +394,4 @@ onBeforeUnmount(() => {
 .trend {
   color: color.$red;
 }
-
-// hash リンク (#about, #service, #works, #contact) でスクロールした際に
-// 固定ヘッダにかぶらないよう、ビューポート上端からのオフセットを確保する。
-#about,
-#service,
-#works,
-#contact {
-  scroll-margin-top: var(--header-height);
-}
 </style>

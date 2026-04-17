@@ -13,6 +13,16 @@ html {
   scroll-behavior: smooth;
 }
 
+// hash リンク (#about, #service, #works, #contact) でスクロールした際に
+// 固定ヘッダにかぶらないよう、ビューポート上端からのオフセットを確保する。
+// ページ側 scoped style ではセクタ指定が効かないケースがあるためグローバルに置く。
+#about,
+#service,
+#works,
+#contact {
+  scroll-margin-top: var(--header-height);
+}
+
 body {
   height: 100%;
   margin: 0 auto;
