@@ -4,8 +4,13 @@
 @use "color";
 @use "size";
 
+:root {
+  --header-height: #{size.$header-height};
+}
+
 html {
   font-family: 'Noto Sans JP', sans-serif;
+  scroll-behavior: smooth;
 }
 
 body {
