@@ -1,3 +1,11 @@
+import { normalizePreviewFlag } from './utils/env/isPreview'
+
+// CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
+// `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
+const isPreviewEnv = normalizePreviewFlag(process.env.CONTENT_PREVIEW)
+const isProductionBuild = process.env.NODE_ENV === 'production'
+const isContentPreviewEnabled = isPreviewEnv && !isProductionBuild
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   // SSG (prerender) を有効化するため、SSR を明示的に true に設定する。
@@ -7,6 +15,15 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/content',
   ],
+
+  runtimeConfig: {
+    // サーバ/クライアントで共有されるプレビュー制御フラグ。
+    // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
+    contentPreview: isContentPreviewEnabled,
+    public: {
+      baseUrl: 'https://nozomi.bike',
+    },
+  },
 
   css: [
     '@/assets/scss/app.scss',
