@@ -3,7 +3,7 @@
  *
  * Nuxt Content v3 の `queryCollection('articles')` をラップし、UI 層が
  * 直接クエリビルダーの形状に依存しないようにする。プレビュー状態は
- * `runtimeConfig.contentPreview` (または明示指定) で制御し、本番では
+ * `runtimeConfig.public.contentPreview` (または明示指定) で制御し、本番では
  * 公開済みかつ `published_at` が過去日時の記事のみを返す。
  */
 import { queryCollection } from '#imports'

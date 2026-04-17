@@ -70,10 +70,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    // サーバ/クライアントで共有されるプレビュー制御フラグ。
-    // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
-    contentPreview: isContentPreviewEnabled,
     public: {
+      // サーバ/クライアントで共有されるプレビュー制御フラグ。
+      // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
+      // クライアント側からも参照するため `public` に配置する。
+      contentPreview: isContentPreviewEnabled,
       baseUrl: 'https://nozomi.bike',
     },
   },

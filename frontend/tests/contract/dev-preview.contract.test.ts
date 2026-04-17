@@ -13,13 +13,13 @@ import {
 /**
  * CONTENT_PREVIEW フローの契約テスト。
  *
- * `nuxt.config.ts` の `runtimeConfig.contentPreview` の算出ロジックを
+ * `nuxt.config.ts` の `runtimeConfig.public.contentPreview` の算出ロジックを
  * 実装と同じ組み合わせで検証し、「開発時は preview 可 / 本番ビルドでは
  * 必ず false」という fail-closed 契約を純関数レベルで固定する。
  *
  * この契約テストの責務:
- *   1. 環境変数の入力 -> `runtimeConfig.contentPreview` の算出 (nuxt.config.ts
- *      と同じ式) が期待通りの真偽値を返す
+ *   1. 環境変数の入力 -> `runtimeConfig.public.contentPreview` の算出
+ *      (nuxt.config.ts と同じ式) が期待通りの真偽値を返す
  *   2. `buildPrerenderRoutes` の fail-closed 契約 (production x preview=true
  *      で throw) が維持されている
  *   3. fixture に対応する 5 件の記事 frontmatter を対象に、preview on/off の
@@ -31,8 +31,9 @@ import {
  */
 
 /**
- * `nuxt.config.ts` と同一ロジックで `runtimeConfig.contentPreview` を算出する。
- * contract テストで実装と動作を一致させるため、同じ式をそのまま写経している。
+ * `nuxt.config.ts` と同一ロジックで `runtimeConfig.public.contentPreview`
+ * を算出する。contract テストで実装と動作を一致させるため、同じ式を
+ * そのまま写経している。
  */
 function computeRuntimeContentPreview(
   raw: string | undefined,
@@ -43,7 +44,7 @@ function computeRuntimeContentPreview(
   return isPreviewEnv && !isProductionBuild
 }
 
-describe('CONTENT_PREVIEW -> runtimeConfig.contentPreview contract', () => {
+describe('CONTENT_PREVIEW -> runtimeConfig.public.contentPreview contract', () => {
   describe('preview enabled cases', () => {
     it('CONTENT_PREVIEW=1 and NODE_ENV=development yields true', () => {
       expect(computeRuntimeContentPreview('1', 'development')).toBe(true)
