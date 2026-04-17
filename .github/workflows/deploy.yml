@@ -26,7 +26,6 @@ jobs:
       - name: Install Dependencies
         run: |
           npm ci
-          npm run build
           npm run generate
 
       - name: Deploy Directories
