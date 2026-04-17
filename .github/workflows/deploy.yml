@@ -28,6 +28,14 @@ jobs:
           npm ci
           npm run generate
 
+      - name: Assert no drafts in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-drafts.sh
+
+      - name: Assert no external images in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-external-images.sh
+
       - name: Deploy Directories
         run: ls -al
 
