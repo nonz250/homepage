@@ -13,6 +13,14 @@ html {
   scroll-behavior: smooth;
 }
 
+// OS / ブラウザで「視差効果を減らす」設定をしているユーザには、
+// スムーススクロールの代わりに即時ジャンプ（auto）を提供してアクセシビリティを確保する。
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 // hash リンク (#about, #service, #works, #contact) でスクロールした際に
 // 固定ヘッダにかぶらないよう、ビューポート上端からのオフセットを確保する。
 // ページ側 scoped style ではセクタ指定が効かないケースがあるためグローバルに置く。
