@@ -12,9 +12,13 @@
     "@fortawesome/fontawesome-svg-core": "^6.2.1",
     "@fortawesome/free-brands-svg-icons": "^6.2.1",
     "@fortawesome/vue-fontawesome": "^3.0.2",
+    "@vitest/coverage-v8": "^4.1.4",
+    "@vue/test-utils": "^2.4.6",
     "cross-env": "^10.1.0",
+    "happy-dom": "^20.9.0",
     "material-icons": "^1.13.1",
     "nuxt": "^3.19.0",
-    "sass": "^1.57.1"
+    "sass": "^1.57.1",
+    "vitest": "^4.1.4"
   }
 }
