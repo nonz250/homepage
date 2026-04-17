@@ -6,9 +6,9 @@
     "generate": "cross-env CONTENT_PREVIEW= NODE_ENV=production nuxt generate",
     "preview": "nuxt preview",
     "prepare": "nuxt prepare",
-    "test:unit": "vitest run --dir tests/unit",
-    "test:integration": "vitest run --dir tests/integration",
-    "test:contract": "vitest run --dir tests/contract",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:contract": "vitest run tests/contract",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
