@@ -96,8 +96,7 @@ export default defineNuxtConfig({
       crawlLinks: true,
       // 明示的に prerender する静的ルート。articles 個別ページの
       // 動的ルートは `nitro:config` hook 内で追加する。
-      // NOTE: `/articles` 一覧ページは Step 10〜13 の UI 実装後に追加する。
-      routes: ['/'],
+      routes: ['/', '/articles'],
     },
   },
 
