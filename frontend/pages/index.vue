@@ -169,6 +169,28 @@
     </div>
 
     <div class="graph">
+      <section id="articles" class="section content pt-1">
+        <h2>Latest Articles</h2>
+        <ul v-if="latestArticles.length > 0" class="articles">
+          <li v-for="article in latestArticles" :key="article.slug" class="articles-item">
+            <article-card
+              :article="article"
+              :is-draft="preview && !article.published"
+            />
+          </li>
+        </ul>
+        <p v-else class="articles-empty">
+          まだ記事がありません。
+        </p>
+        <p class="articles-footer">
+          <nuxt-link to="/articles" class="all-articles-link">
+            All Articles →
+          </nuxt-link>
+        </p>
+      </section>
+    </div>
+
+    <div class="parallax-bg">
       <section id="contact" class="section content">
         <h2>Contact me</h2>
         <div class="contact-container">
@@ -198,17 +220,29 @@
 </template>
 
 <script setup lang="ts">
-import Anchor from "~/components/atoms/Anchor";
-import ProfileImages from '~/components/parts/ProfileImages'
-import Service from '~/components/parts/Service'
-import Work from '~/components/parts/Work'
+import Anchor from "~/components/atoms/Anchor.vue";
+import ArticleCard from "~/components/parts/ArticleCard.vue";
+import ProfileImages from '~/components/parts/ProfileImages.vue'
+import Service from '~/components/parts/Service.vue'
+import Work from '~/components/parts/Work.vue'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import { useArticles } from "~/composables/useArticles";
+import { useContentPreview } from "~/composables/useContentPreview";
+import { INDEX_LATEST_ARTICLES_LIMIT } from "~/constants/article";
 import {
   CONTACT_ACTIVE_CHECK_INTERVAL_MS,
   UNDERLINE_DRAW_INITIAL_DELAY_MS,
   UNDERLINE_DRAW_STEP_DELAY_MS,
   UNDERLINE_REDRAW_INTERVAL_MS,
 } from "~/constants/timing";
+
+// 最新記事セクション用。preview でない本番ビルドでは useArticles が
+// 可視性フィルタ済みの公開記事だけを返し、降順 (新着順) で並ぶ。
+const preview = useContentPreview()
+const latestArticles = await useArticles({
+  preview,
+  limit: INDEX_LATEST_ARTICLES_LIMIT,
+})
 
 const currentScrollY = ref<number>(0)
 
@@ -385,6 +419,39 @@ onBeforeUnmount(() => {
     gap: 2rem;
     grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
     justify-items: center;
+  }
+
+  > .articles {
+    margin: 0;
+    padding: 0 0 1rem 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    > .articles-item {
+      width: 100%;
+    }
+  }
+
+  > .articles-empty {
+    color: color.$lnk-black;
+  }
+
+  > .articles-footer {
+    margin: 0;
+    padding: 0 0 2rem 0;
+    text-align: right;
+
+    > .all-articles-link {
+      color: color.$lnk-black;
+      font-weight: bold;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 
   > .contact-container {

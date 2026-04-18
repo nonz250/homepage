@@ -21,12 +21,14 @@ html {
   }
 }
 
-// hash リンク (#about, #service, #works, #contact) でスクロールした際に
-// 固定ヘッダにかぶらないよう、ビューポート上端からのオフセットを確保する。
-// ページ側 scoped style ではセクタ指定が効かないケースがあるためグローバルに置く。
+// hash リンク (#about, #service, #works, #articles, #contact) で
+// スクロールした際に固定ヘッダにかぶらないよう、ビューポート上端からの
+// オフセットを確保する。ページ側 scoped style ではセクタ指定が効かない
+// ケースがあるためグローバルに置く。
 #about,
 #service,
 #works,
+#articles,
 #contact {
   scroll-margin-top: var(--header-height);
 }

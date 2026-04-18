@@ -12,6 +12,9 @@
         <nuxt-link to="/#works" class="actions-link mr-1">
           Works
         </nuxt-link>
+        <nuxt-link to="/articles" class="actions-link mr-1">
+          Articles
+        </nuxt-link>
         <nuxt-link to="/#contact" class="actions-link mr-1">
           Contact
         </nuxt-link>

@@ -1,0 +1,156 @@
+name: Test
+
+# Phase 1 Blog MVP の品質ゲート。
+#
+# ジョブ構成:
+#   typecheck           - vue-tsc による型チェック (必須ゲート)
+#   unit                - 純関数 / コンポーネント単体テスト
+#   integration         - npm run generate を走らせて .output / .data を検証
+#   contract            - CONTENT_PREVIEW などランタイム契約の固定
+#   build-artifact-scan - generate 後の下書き / 外部画像リーク検査
+#   e2e                 - Playwright による end-to-end テスト (Step 17 で追加)
+#
+# TODO(phase 2): ESLint を導入し lint ジョブを追加する。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Type check with vue-tsc
+        run: npx vue-tsc --noEmit
+
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Run unit tests
+        run: npm run test:unit
+
+  integration:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
+        run: npm rebuild better-sqlite3
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Run integration tests
+        run: npm run test:integration
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Run contract tests
+        run: npm run test:contract
+
+  build-artifact-scan:
+    runs-on: ubuntu-latest
+    # 生成成果物に対するスキャンなので、先に高速なテストを通してから回す。
+    needs: [unit, integration]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
+        run: npm rebuild better-sqlite3
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Build (generate)
+        run: npm run generate
+      - name: Assert no drafts in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-drafts.sh
+      - name: Assert no external images in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-external-images.sh
+
+  e2e:
+    runs-on: ubuntu-latest
+    # ブラウザ起動が重いので、静的テストが通ってから回す。
+    needs: [unit, integration, contract]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
+        run: npm rebuild better-sqlite3
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Build (generate)
+        run: npm run generate
+      - name: Run E2E tests
+        run: npm run test:e2e
