@@ -1,6 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve, join } from 'node:path'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
@@ -10,10 +9,7 @@ import {
   detectSlugCollisions,
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
-import {
-  ARTICLES_TAG_ROUTE_PREFIX,
-  TAGS_INDEX_FILE_NAME,
-} from './constants/tags'
+import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -179,6 +175,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // ビルド時に書き出すタグ index (JSON 文字列)。
+    // 実値は `nitro:config` hook で決定し、server handler
+    // (`server/routes/tags.json.get.ts`) から参照する。
+    // server 専用の情報なので `public` 配下には置かない。
+    tagsIndexJson: '{}',
     public: {
       // サーバ/クライアントで共有されるプレビュー制御フラグ。
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
@@ -215,6 +216,12 @@ export default defineNuxtConfig({
     // Nuxt Content v3 の `queryCollection` は server runtime API なので
     // build hook からは使えない。gray-matter で frontmatter を直接パースする
     // fallback を採用 (ADR Phase 1 で合意済み)。
+    //
+    // タグ index は nitro server handler (`server/routes/tags.json.get.ts`)
+    // 経由で `/tags.json` として配信する。prerender 時に `crawlLinks` で
+    // 踏まれたときにも静的ファイル `.output/public/tags.json` が emit される。
+    // その生データ (JSON 文字列) は `runtimeConfig.tagsIndexJson` としてここで
+    // 固めて server handler に渡す。
     'nitro:config'(nitroConfig) {
       // dev モード (nuxt dev) では prerender 経路自体が無効なため早期 return。
       if (nitroConfig.dev) {
@@ -242,8 +249,8 @@ export default defineNuxtConfig({
         nodeEnv,
       })
       // タグ index をビルド時点で確定し、prerender 対象のタグページ URL と
-      // `.output/public/tags.json` の書き出し内容の両方を同じデータから
-      // 生成する (両者がズレるとタグページ 404 の原因になる)。
+      // server handler が返す JSON の両方を同じデータから生成する
+      // (両者がズレるとタグページ 404 の原因になる)。
       const tagsIndex = buildTagsIndex(articles, buildTime, {
         preview,
         nodeEnv,
@@ -256,32 +263,15 @@ export default defineNuxtConfig({
         ...(nitroConfig.prerender.routes ?? []),
         ...routes,
         ...tagRoutes,
+        // `/tags.json` 自体も prerender 対象に含めることで、
+        // generate 成果物 `.output/public/tags.json` として emit される。
+        '/tags.json',
       ]
-    },
-    // `.output/public/tags.json` を書き出す。`nitro:build:public-assets` は
-    // `copyPublicAssets` 直後 (prerender 開始前) に呼ばれるため、ここで書き
-    // 出すと prerender 時に tags.json が既に存在する状態になる。
-    //
-    // dev では呼ばれない hook なので、dev 時 `useTagIndex` が 404 を返しても
-    // fail-safe に空マップとして振る舞うよう composable 側で担保する。
-    'nitro:build:public-assets'(nitro) {
-      const nodeEnv = process.env.NODE_ENV
-      const preview =
-        nodeEnv === 'production'
-          ? false
-          : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
-      const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
-      const tagsIndex = buildTagsIndex(articles, getBuildTime(), {
-        preview,
-        nodeEnv,
-      })
-      const publicDir = nitro.options.output.publicDir
-      mkdirSync(publicDir, { recursive: true })
-      writeFileSync(
-        join(publicDir, TAGS_INDEX_FILE_NAME),
-        JSON.stringify(tagsIndex),
-        'utf8',
-      )
+      // server handler がランタイムで参照するデータ。`tagsIndex` そのものでも
+      // 良いが、runtimeConfig 上は JSON 文字列として固めた方が h3 側で
+      // `JSON.parse` → 返却の単純な経路で済む。
+      nitroConfig.runtimeConfig = nitroConfig.runtimeConfig ?? {}
+      nitroConfig.runtimeConfig.tagsIndexJson = JSON.stringify(tagsIndex)
     },
   },
 

@@ -118,3 +118,55 @@ test.describe('non-existent articles are not served', () => {
     })
   }
 })
+
+/**
+ * 有効なタグの一覧 (site-articles/hello.md の topics と一致)。
+ * `/articles/tags/[tag]` ページの 200 検証に使う。
+ */
+const EXISTING_TAGS = ['blog', 'announcement'] as const
+
+/** 存在しないタグ。404 を返すことを検証する。 */
+const MISSING_TAGS = ['nonexistent', 'made-up-tag'] as const
+
+test.describe('tag listing pages', () => {
+  for (const tag of EXISTING_TAGS) {
+    test(`/articles/tags/${tag} returns 200 and lists at least one article`, async ({ page }) => {
+      const issues = collectConsoleIssues(page)
+      const response = await page.goto(`/articles/tags/${tag}`)
+      expect(response, 'navigation response should exist').not.toBeNull()
+      expect(response!.status()).toBe(200)
+
+      await expect(page.locator('h1.page-title')).toContainText(`#${tag}`)
+      // 公開記事 hello が必ず含まれている (blog / announcement 両方の topic)。
+      // layout の <main> と page の <main> が 2 つあるため、記事リストを
+      // 1 つに絞り込んでから text を確認する。
+      await expect(page.locator('.article-list')).toContainText('ブログを移転しました')
+
+      expect(issues, 'no console errors or hydration warnings').toEqual([])
+    })
+  }
+
+  for (const tag of MISSING_TAGS) {
+    test(`/articles/tags/${tag} returns 404`, async ({ page }) => {
+      const response = await page.goto(`/articles/tags/${tag}`)
+      expect(response).not.toBeNull()
+      expect(response!.status()).toBe(404)
+    })
+  }
+})
+
+test.describe('tags index JSON artifact', () => {
+  test('/tags.json is served as application/json and has expected shape', async ({ request }) => {
+    const response = await request.get('/tags.json')
+    expect(response.status()).toBe(200)
+    // static file 配信なので content-type は server の実装次第。
+    // 少なくとも JSON として parse 可能であることを確認する。
+    const body = await response.json()
+    expect(typeof body).toBe('object')
+    expect(Array.isArray(body)).toBe(false)
+    for (const tag of EXISTING_TAGS) {
+      expect(Array.isArray(body[tag])).toBe(true)
+      expect(body[tag].length).toBeGreaterThan(0)
+    }
+  })
+})
