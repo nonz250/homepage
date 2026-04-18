@@ -75,3 +75,21 @@ export const ZENN_EMBED_CARD_TAG = 'zenn-embed-card'
  * `rehypeAssertNoZennLeftovers` が build fail させる。
  */
 export const ZENN_MERMAID_TAG = 'zenn-mermaid'
+
+/**
+ * `@[tweet](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedTweet.vue` と対応する。Twitter / X widgets.js をクライアント側で
+ * 動的に読み込み、`<blockquote class="twitter-tweet">` を iframe 化する。
+ * SSR / JS 無効環境では fallback として `<a>` で Tweet への外部リンクを出す。
+ */
+export const ZENN_EMBED_TWEET_TAG = 'zenn-embed-tweet'
+
+/**
+ * `@[gist](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedGist.vue` と対応する。`<script src="https://gist.github.com/
+ * <user>/<id>.js">` をクライアント側で動的挿入する。SSR / JS 無効環境では
+ * fallback として Gist への外部リンクを出す。
+ */
+export const ZENN_EMBED_GIST_TAG = 'zenn-embed-gist'
