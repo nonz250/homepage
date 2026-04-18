@@ -20,11 +20,18 @@ import {
   OGP_HEIGHT,
   OGP_WIDTH,
 } from './ogpTemplate'
+import { loadTwemojiSvg } from './loadTwemojiSvg'
 
 /** Satori に渡すフォント設定のデフォルト値 */
 const DEFAULT_FONT_NAME = 'Noto Sans JP'
 const DEFAULT_FONT_WEIGHT = 400
 const DEFAULT_FONT_STYLE = 'normal' as const
+
+/**
+ * Satori の `loadAdditionalAsset` で `code === 'emoji'` 時に渡される定数。
+ * それ以外 (言語コード等) ではフォールバックして segment をそのまま返す。
+ */
+const EMOJI_LANGUAGE_CODE = 'emoji'
 
 /**
  * `generateArticleOgp` のオプション。
@@ -76,6 +83,20 @@ export async function generateArticleOgp(
         style: DEFAULT_FONT_STYLE,
       },
     ],
+    // Noto Sans JP のサブセットには絵文字グリフが含まれない (本文対応のため
+    // 意図的に落としている)。Satori が絵文字セグメントを検出したら、ここで
+    // Twemoji SVG の data URI に差し替えて `<img>` として描画させる。
+    // 見つからない絵文字はセグメントをそのまま返し、フォントのフォールバックに
+    // 任せる (最悪豆腐表示になるが、build は止めない)。
+    loadAdditionalAsset: async (code, segment) => {
+      if (code === EMOJI_LANGUAGE_CODE) {
+        const twemojiDataUri = await loadTwemojiSvg(segment)
+        if (twemojiDataUri !== null) {
+          return twemojiDataUri
+        }
+      }
+      return segment
+    },
   })
 
   const resvg = new Resvg(svg, {
