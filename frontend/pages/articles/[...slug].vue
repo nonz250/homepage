@@ -20,6 +20,7 @@ import {
   type FlatTocHeading,
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
+import { DEFAULT_OG_IMAGE_PATH } from '~/constants/seo'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -69,14 +70,26 @@ const description: string =
     ? articleContent.description
     : `${article.title} | Nozomi Hosaka`
 
+// 記事個別の Open Graph / SEO メタを組み立てる。
+// baseUrl は runtimeConfig.public に置かれており、クライアント側からも
+// 参照できる (prerender 時にも展開済み)。記事 URL は `/articles/<slug>` に
+// そろえ、OG 画像は Batch A では共通画像 (DEFAULT_OG_IMAGE_PATH) を既定と
+// する (Batch B で Satori による記事単位の画像差し替えを行う予定)。
+const runtimeConfig = useRuntimeConfig()
+const baseUrl: string = runtimeConfig.public.baseUrl
+const canonicalUrl: string = `${baseUrl}/articles/${slug}`
+const ogImageUrl: string = `${baseUrl}${DEFAULT_OG_IMAGE_PATH}`
+
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: article.title },
-    { property: 'og:description', content: description },
-    { property: 'og:type', content: 'article' },
-  ],
+})
+useSeoMeta({
+  description,
+  ogType: 'article',
+  ogTitle: article.title,
+  ogDescription: description,
+  ogUrl: canonicalUrl,
+  ogImage: ogImageUrl,
 })
 </script>
 
