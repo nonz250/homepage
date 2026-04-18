@@ -36,11 +36,12 @@ const CONTENT_SQLITE = resolve(FRONTEND_ROOT, '.data/content/contents.sqlite')
 /**
  * production で公開される記事 slug 一覧。
  *
- * 現状は `site-articles/hello.md`（本サイト限定、Zenn Connect 対象外）のみ。
+ * 現状は site-articles/ (本サイト限定、Zenn Connect 対象外) の記事のみ。
  * 本 integration test は「articles/ が空でも site-articles/ のみで
  * 本サイトがビルドできる」構成を検証する役割も兼ねる。
  */
-const PUBLIC_SLUGS = ['hello'] as const
+// published_at 降順で並べる（DESC sort テストとの整合のため）
+const PUBLIC_SLUGS = ['syntax-sample', 'hello'] as const
 
 /** ビルド基準時刻 (全 PUBLIC_SLUGS の published_at 以降なら任意で良い) */
 const BUILD_TIME_MS = Date.parse('2026-04-19T00:00:00Z')

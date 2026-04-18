@@ -14,11 +14,14 @@ import type { ConsoleMessage } from '@playwright/test'
  *   - console.error / console.warning が 0 件 (hydration warning を検知)
  */
 
-/** 公開記事の slug 一覧。現状は site-articles/ (本サイト限定) の hello 1 本のみ。 */
-const PUBLIC_SLUGS = ['hello'] as const
+/** 公開記事の slug 一覧。site-articles/ (本サイト限定) の記事のみ。 */
+const PUBLIC_SLUGS = ['syntax-sample', 'hello'] as const
 
 /** 公開記事のタイトル期待値 (fixture frontmatter の title と一致) */
-const PUBLIC_ARTICLE_TITLES = ['ブログを移転しました'] as const
+const PUBLIC_ARTICLE_TITLES = [
+  '本サイトで使える記法のサンプル',
+  'ブログを移転しました',
+] as const
 
 /** 404 を期待する（prerender されない）slug のサンプル */
 const MISSING_SLUGS = ['not-published', 'some-future-article'] as const
