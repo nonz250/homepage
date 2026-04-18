@@ -8,6 +8,8 @@ import {
   detectSlugCollisions,
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
@@ -45,6 +47,15 @@ const REMARK_ZENN_IMAGE_PATH = resolve(
   './utils/markdown/remarkZennImage.ts',
 )
 
+/**
+ * KaTeX の組み込み CSS へのパス。`katex` パッケージが提供する
+ * `dist/katex.min.css` を Nuxt の `css` オプションで読み込むことで、
+ * `rehype-katex` が生成する `.katex` 要素に適切なフォント/レイアウトが
+ * 適用される。直書きせず named 定数として切り出し、依存先パスが変わった
+ * ときの影響範囲を 1 箇所に閉じ込める。
+ */
+const KATEX_CSS_PATH = 'katex/dist/katex.min.css'
+
 /** articles 画像を公開配信するパス */
 const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 
@@ -72,12 +83,32 @@ export default defineNuxtConfig({
   content: {
     build: {
       markdown: {
+        // Zenn 互換記法を Nuxt Content の MDC / HAST パイプラインに繋ぐ
+        // プラグイン群。Nuxt Content v3 (`@nuxtjs/mdc`) のデフォルトには
+        // `remark-mdc` / `remark-gfm` / `remark2rehype` が含まれるため、
+        // ここに追加したユーザー plugin はそれらの **後** に走る。
+        //
+        // 順序の設計意図:
+        //   1. `remark-zenn-image` (既存): Zenn の `/images/...` を
+        //      `/articles-images/...` に書き換え
+        //   2. `remark-math`: `$...$` / `$$...$$` を mdast-math ノードに
+        //      昇格 (後段 rehype-katex が HTML 化)
         remarkPlugins: {
           'remark-zenn-image': {
             instance: remarkZennImage,
             src: REMARK_ZENN_IMAGE_PATH,
             // @nuxtjs/mdc の mdc-imports テンプレートが options 未指定
             // 時に plugin オブジェクト全体を渡してしまう挙動の回避。
+            options: {},
+          },
+          'remark-math': {
+            instance: remarkMath,
+            options: {},
+          },
+        },
+        rehypePlugins: {
+          'rehype-katex': {
+            instance: rehypeKatex,
             options: {},
           },
         },
@@ -160,6 +191,7 @@ export default defineNuxtConfig({
     '@fortawesome/fontawesome-svg-core/styles.css',
     'material-icons/iconfont/material-icons.css',
     '@fontsource/noto-sans-jp/japanese.css',
+    KATEX_CSS_PATH,
   ],
 
   app: {
