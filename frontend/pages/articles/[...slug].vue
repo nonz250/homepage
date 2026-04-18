@@ -20,6 +20,7 @@ import {
   type FlatTocHeading,
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
+import { resolveArticleOgImagePath } from '~/constants/seo'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -69,14 +70,29 @@ const description: string =
     ? articleContent.description
     : `${article.title} | Nozomi Hosaka`
 
+// 記事個別の Open Graph / SEO メタを組み立てる。
+// baseUrl は runtimeConfig.public に置かれており、クライアント側からも
+// 参照できる (prerender 時にも展開済み)。記事 URL は `/articles/<slug>` に
+// そろえる。
+// OG 画像は Phase 4 Batch B から記事単位で切り替える。
+// `nitro:build:public-assets` hook で `.output/public/ogp/<slug>.png` を
+// 生成し、ここから `/ogp/<slug>.png` として参照する。slug が予想外の値でも
+// fallback に倒すガードが `resolveArticleOgImagePath` 内に入っている。
+const runtimeConfig = useRuntimeConfig()
+const baseUrl: string = runtimeConfig.public.baseUrl
+const canonicalUrl: string = `${baseUrl}/articles/${slug}`
+const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
+
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
-  meta: [
-    { name: 'description', content: description },
-    { property: 'og:title', content: article.title },
-    { property: 'og:description', content: description },
-    { property: 'og:type', content: 'article' },
-  ],
+})
+useSeoMeta({
+  description,
+  ogType: 'article',
+  ogTitle: article.title,
+  ogDescription: description,
+  ogUrl: canonicalUrl,
+  ogImage: ogImageUrl,
 })
 </script>
 

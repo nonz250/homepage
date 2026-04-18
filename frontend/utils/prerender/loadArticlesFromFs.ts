@@ -32,12 +32,23 @@ const MARKDOWN_EXTENSION = '.md'
  *
  * `Article` (prerender 判定) と `TagIndexArticle` (タグ index 構築) の
  * 共通 superset。呼び出し側は構造的部分型として扱える。
+ *
+ * Phase 4 で `title` フィールドを追加した。RSS フィード (`/feed.xml`) の
+ * `<item><title>` に利用する。未指定 (frontmatter に `title` が無い) 場合は
+ * 空文字となり、RSS の `<item>` 全体の整合はもはや保たない可能性があるため、
+ * 利用側で必要なら空文字を弾くこと。
  */
 export interface LoadedArticle extends Article, TagIndexArticle {
   readonly slug: string
+  readonly title: string
   readonly published: boolean
   readonly published_at?: string
   readonly topics: readonly string[]
+  /**
+   * 記事に紐づく絵文字 (Zenn 記法の `emoji` frontmatter を踏襲)。
+   * OGP 画像左上のアクセントとして利用される。未指定なら undefined。
+   */
+  readonly emoji?: string
 }
 
 /**
@@ -72,10 +83,12 @@ export function loadArticlesFromFs(
       const slug = parsePath(entry.name).name
       articles.push({
         slug,
+        title: typeof data.title === 'string' ? data.title : '',
         published: data.published === true,
         published_at:
           typeof data.published_at === 'string' ? data.published_at : undefined,
         topics: coerceTopics(data.topics),
+        emoji: typeof data.emoji === 'string' ? data.emoji : undefined,
       })
     }
   }

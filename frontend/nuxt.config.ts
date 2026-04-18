@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
@@ -10,6 +11,9 @@ import {
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
 import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
+import { RSS_FEED_PATH } from './constants/rss'
+import { buildOgpInputs } from './utils/ogp/buildOgpInputs'
+import { writeArticleOgpPngs } from './utils/ogp/writeArticleOgpPngs'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -149,6 +153,21 @@ const KATEX_CSS_PATH = 'katex/dist/katex.min.css'
 
 /** articles 画像を公開配信するパス */
 const ARTICLES_IMAGES_BASE_URL = '/articles-images'
+
+/**
+ * OGP 画像を書き出す publicDir 配下のサブディレクトリ名。
+ * nitro の publicDir (`.output/public`) 配下に `/ogp/<slug>.png` として配置される。
+ */
+const OGP_OUTPUT_SUBDIR = 'ogp'
+
+/**
+ * Satori に渡すサブセット化済み Noto Sans JP フォントの絶対パス。
+ * `scripts/subset-noto-sans-jp.mjs` で生成する成果物を参照する。
+ */
+const OGP_FONT_PATH = resolve(
+  __dirname,
+  'public/fonts/noto-sans-jp-subset.woff',
+)
 
 /** 予約投稿判定などに用いる prerender 実行時刻は常に現在時刻とする */
 const getBuildTime = (): Date => new Date()
@@ -342,7 +361,9 @@ export default defineNuxtConfig({
       crawlLinks: true,
       // 明示的に prerender する静的ルート。articles 個別ページの
       // 動的ルートは `nitro:config` hook 内で追加する。
-      routes: ['/', '/articles'],
+      // `/feed.xml` は Phase 4 Batch A の RSS 配信パス。generate 時に
+      // `.output/public/feed.xml` として emit される。
+      routes: ['/', '/articles', RSS_FEED_PATH],
     },
   },
 
@@ -408,6 +429,40 @@ export default defineNuxtConfig({
       nitroConfig.runtimeConfig = nitroConfig.runtimeConfig ?? {}
       nitroConfig.runtimeConfig.tagsIndexJson = JSON.stringify(tagsIndex)
     },
+
+    // 公開対象の記事ごとに OGP PNG を並列生成し、`.output/public/ogp/<slug>.png`
+    // に書き出す。`nitro:build:public-assets` は public/ の初期コピー後、
+    // Nitro server ビルドの前に呼ばれるため、ここで書き込めば static asset と
+    // して扱える。preview モードでは素の content が OGP に漏れるリスクを避け
+    // るためスキップする (設計 v4 C-B)。
+    async 'nitro:build:public-assets'(nitro) {
+      const nodeEnv = process.env.NODE_ENV
+      const preview =
+        nodeEnv === 'production'
+          ? false
+          : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
+      if (preview) {
+        return
+      }
+      const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
+      const buildTime = getBuildTime()
+      const entries = buildOgpInputs(articles, {
+        preview,
+        nodeEnv,
+        buildTime,
+      })
+      if (entries.length === 0) {
+        return
+      }
+      const fontBuffer = readFileSync(OGP_FONT_PATH)
+      const publicDir: string = nitro.options.output.publicDir
+      const outputDir = resolve(publicDir, OGP_OUTPUT_SUBDIR)
+      await writeArticleOgpPngs(entries, {
+        outputDir,
+        fontBuffer,
+        logger: (msg) => console.info(msg),
+      })
+    },
   },
 
   css: [
@@ -438,7 +493,10 @@ export default defineNuxtConfig({
         { property: 'og:description', content: 'https://nozomi.bike' },
         { property: 'og:url', content: 'https://nozomi.bike' },
         { property: 'og:image', content: 'https://nozomi.bike/images/homepage-ogp.webp' },
-        { property: 'og:image:alt', content: 'Business card' },
+        // `og:image:alt` は Phase 0 以前の "Business card" が残っており、
+        // 現サイトの記事/ポートフォリオ用途と一致しないため削除。記事別の
+        // 動的 alt は後続 Phase で検討する (今は未設定のほうが誤表示より
+        // 安全)。
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
