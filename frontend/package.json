@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "cross-env CONTENT_PREVIEW=1 nuxt dev",
+    "dev": "nuxt dev",
     "generate": "cross-env CONTENT_PREVIEW= NODE_ENV=production nuxt generate",
     "preview": "nuxt preview",
     "prepare": "nuxt prepare",
