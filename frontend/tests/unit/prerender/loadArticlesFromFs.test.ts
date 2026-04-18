@@ -63,6 +63,7 @@ describe('loadArticlesFromFs', () => {
     expect(articles).toEqual([
       {
         slug: 'hello',
+        title: 'hello',
         published: true,
         published_at: '2026-04-18T00:00:00+09:00',
         topics: ['blog', 'announcement'],
@@ -121,6 +122,7 @@ describe('loadArticlesFromFs', () => {
     expect(loadArticlesFromFs(dir)).toEqual([
       {
         slug: 'weird',
+        title: 'weird',
         published: false,
         published_at: undefined,
         topics: [],
@@ -168,5 +170,21 @@ describe('loadArticlesFromFs', () => {
     writeArticle(dir, 'README.txt', 'skip me')
 
     expect(loadArticlesFromFs(dir).map((a) => a.slug)).toEqual(['hello'])
+  })
+
+  it('falls back to empty string when title is missing or non-string', () => {
+    const dir = join(tmpRoot, 'articles')
+    mkdirSync(dir)
+    writeArticle(dir, 'no-title.md', '---\npublished: true\n---\n')
+    writeArticle(
+      dir,
+      'numeric-title.md',
+      '---\ntitle: 42\npublished: true\n---\n',
+    )
+    const byName = Object.fromEntries(
+      loadArticlesFromFs(dir).map((a) => [a.slug, a.title] as const),
+    )
+    expect(byName['no-title']).toBe('')
+    expect(byName['numeric-title']).toBe('')
   })
 })
