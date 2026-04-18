@@ -36,12 +36,11 @@ const CONTENT_SQLITE = resolve(FRONTEND_ROOT, '.data/content/contents.sqlite')
 /**
  * production で公開される記事 slug 一覧。
  *
- * - `hello` は articles/ (Zenn 共有) の記事
- * - `about-this-site` は site-articles/ (本サイト限定) の記事
- * 両ディレクトリが同一コレクションに統合されることと、下書きマーカーが
- * どちらの経路でも漏れないことを検証する目的で、公開 slug をここで固定する。
+ * 現状は `site-articles/hello.md`（本サイト限定、Zenn Connect 対象外）のみ。
+ * 本 integration test は「articles/ が空でも site-articles/ のみで
+ * 本サイトがビルドできる」構成を検証する役割も兼ねる。
  */
-const PUBLIC_SLUGS = ['hello', 'about-this-site'] as const
+const PUBLIC_SLUGS = ['hello'] as const
 
 /** ビルド基準時刻 (全 PUBLIC_SLUGS の published_at 以降なら任意で良い) */
 const BUILD_TIME_MS = Date.parse('2026-04-19T00:00:00Z')
@@ -154,26 +153,6 @@ describe('articles query integration (production generate)', () => {
       expect(article.published).toBe(true)
     })
 
-    it('toArticle maps site-articles rows with the same DTO contract', () => {
-      // site-articles/ の記事も articles/ と同じコレクションに統合される。
-      // DB 経路でも DTO 変換できることを明示的に検証する。
-      const siteOnly = rows.find((r) => r.stem === 'about-this-site')
-      expect(siteOnly).toBeDefined()
-      if (!siteOnly) return
-      const article = toArticle({
-        stem: siteOnly.stem,
-        path: siteOnly.path,
-        title: siteOnly.title,
-        type: 'idea',
-        topics: [],
-        published: siteOnly.published === 1,
-        published_at: siteOnly.published_at ?? undefined,
-      })
-      expect(article.slug).toBe('about-this-site')
-      expect(article.path).toBe('/about-this-site')
-      expect(article.published).toBe(true)
-    })
-
     it('descending sort by published_at matches composable contract', () => {
       const sorted = rows
         .filter(
@@ -186,9 +165,7 @@ describe('articles query integration (production generate)', () => {
           return bMs - aMs
         })
         .map((r) => r.stem)
-      // about-this-site (2026-04-18T01:00+09:00) が hello (2026-04-18T00:00+09:00)
-      // より新しいため DESC 順では先に来る。
-      expect(sorted).toEqual(['about-this-site', 'hello'])
+      expect(sorted).toEqual([...PUBLIC_SLUGS])
     })
   })
 })
