@@ -33,6 +33,8 @@ const EXPECTED_ZENN_COMPONENTS: readonly string[] = [
   'ZennEmbedCodeSandbox.vue',
   'ZennEmbedStackBlitz.vue',
   'ZennEmbedCard.vue',
+  // Phase 3 Batch C1 で追加。 ```mermaid コードフェンスを SVG 描画する。
+  'ZennMermaid.vue',
 ] as const
 
 /**

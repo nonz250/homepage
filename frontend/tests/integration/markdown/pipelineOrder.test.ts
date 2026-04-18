@@ -11,10 +11,12 @@ import type { Root as HastRoot } from 'hast'
 import remarkZennImage from '../../../utils/markdown/remarkZennImage'
 import remarkZennContainer from '../../../utils/markdown/remarkZennContainer'
 import remarkZennEmbed from '../../../utils/markdown/remarkZennEmbed'
+import remarkZennMermaid from '../../../utils/markdown/remarkZennMermaid'
 import rehypeAssertNoZennLeftovers from '../../../utils/markdown/rehypeAssertNoZennLeftovers'
 import {
   ZENN_DETAILS_TAG,
   ZENN_EMBED_YOUTUBE_TAG,
+  ZENN_MERMAID_TAG,
   ZENN_MESSAGE_TAG,
 } from '../../../constants/zenn-mdc'
 
@@ -40,16 +42,21 @@ import {
 /**
  * 統合パイプラインを走らせ、最終 HAST を得るヘルパー。
  *
- * 順序は Step 14 で固めた設計:
+ * 順序は Phase 3 Batch C1 時点の設計:
  *   1. remarkParse  (md → mdast)
  *   2. remarkMdc    (MDC 記法の初期パース)
  *   3. remarkZennContainer (残った Zenn コンテナ記法を MDC ノード化)
  *   4. remarkZennEmbed     (Zenn 埋め込み記法を MDC ノード化)
- *   5. remarkZennImage     (/images/... → /articles-images/...)
- *   6. remarkMath   ($...$ を math ノードに)
- *   7. remarkRehype (mdast → hast)
- *   8. rehypeKatex  (math ノードを KaTeX HTML に)
- *   9. rehypeAssertNoZennLeftovers (未対応記法があれば throw)
+ *   5. remarkZennMermaid   (```mermaid コードフェンスを <zenn-mermaid> に)
+ *   6. remarkZennImage     (/images/... → /articles-images/...)
+ *   7. remarkMath   ($...$ を math ノードに)
+ *   8. remarkRehype (mdast → hast)
+ *   9. rehypeKatex  (math ノードを KaTeX HTML に)
+ *  10. rehypeAssertNoZennLeftovers (未対応記法があれば throw)
+ *
+ * remark-zenn-card は本テストでは OGP fetch stub が必要になるため、統合
+ * 専用テスト (`zennCardPipeline.test.ts`) に切り出している。本ファイルは
+ * それ以外の Zenn 記法とパイプライン順序の回帰を担う。
  */
 function runPipeline(md: string): HastRoot {
   const processor = unified()
@@ -57,6 +64,7 @@ function runPipeline(md: string): HastRoot {
     .use(remarkMdc)
     .use(remarkZennContainer)
     .use(remarkZennEmbed)
+    .use(remarkZennMermaid)
     .use(remarkZennImage)
     .use(remarkMath)
     .use(remarkRehype)
@@ -140,6 +148,43 @@ describe('zenn markdown pipeline (integration)', () => {
     it('throws when :::warning container remains', () => {
       const md = [':::warning', 'body', ':::', ''].join('\n')
       expect(() => runPipeline(md)).toThrow()
+    })
+
+    it('throws when @[mermaid] inline directive remains (inline form unsupported)', () => {
+      // mermaid はコードフェンス ``` 形式のみサポートし、`@[mermaid]` inline
+      // directive は意図的に未サポート。rehypeAssertNoZennLeftovers が span
+      // 検知パターンで throw する契約を回帰で固定する。
+      const md = '@[mermaid]\n'
+      expect(() => runPipeline(md)).toThrow()
+    })
+  })
+
+  describe('mermaid code fence renders as <zenn-mermaid>', () => {
+    it('converts ```mermaid into a <zenn-mermaid code="..."> element', () => {
+      const md = ['```mermaid', 'graph TD', 'A --> B', '```', ''].join('\n')
+      const html = runPipelineToHtml(md)
+      expect(html).toContain(`<${ZENN_MERMAID_TAG}`)
+      expect(html).toContain('code="graph TD')
+    })
+
+    it('leaves other language fences (js) unchanged while converting mermaid', () => {
+      const md = [
+        '```js',
+        'const a = 1',
+        '```',
+        '',
+        '```mermaid',
+        'flowchart LR',
+        'A --> B',
+        '```',
+        '',
+      ].join('\n')
+      const html = runPipelineToHtml(md)
+      // js の code fence は pre/code element として残る
+      expect(html).toContain('<pre')
+      expect(html).toContain('language-js')
+      // mermaid fence は MDC element に昇格
+      expect(html).toContain(`<${ZENN_MERMAID_TAG}`)
     })
   })
 

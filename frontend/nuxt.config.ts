@@ -16,6 +16,7 @@ import remarkZennImage from './utils/markdown/remarkZennImage'
 import remarkZennContainer from './utils/markdown/remarkZennContainer'
 import remarkZennEmbed from './utils/markdown/remarkZennEmbed'
 import remarkZennCard from './utils/markdown/remarkZennCard'
+import remarkZennMermaid from './utils/markdown/remarkZennMermaid'
 import rehypeAssertNoZennLeftovers from './utils/markdown/rehypeAssertNoZennLeftovers'
 import type { FetchOgpFn } from './utils/markdown/remarkZennCard'
 import type { OgpFailure } from './utils/ogp/fetchOgp'
@@ -95,6 +96,16 @@ const REMARK_ZENN_EMBED_PATH = resolve(
 const REMARK_ZENN_CARD_PATH = resolve(
   __dirname,
   './utils/markdown/remarkZennCard.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennMermaid`) の絶対パス。
+ * ` ```mermaid ` コードフェンスを `<zenn-mermaid>` MDC コンポーネントに
+ * 変換し、クライアント側での動的 import 描画に橋渡しする。
+ */
+const REMARK_ZENN_MERMAID_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennMermaid.ts',
 )
 
 /**
@@ -203,9 +214,12 @@ export default defineNuxtConfig({
         //   3. `remark-zenn-card`:      `@[card](url)` を `zenn-embed-card` に
         //      昇格し、build 時に OGP を取得して props を埋め込む
         //      (NO_NETWORK_FETCH=1 時は failure stub で fallback)
-        //   4. `remark-zenn-image`:     Zenn の `/images/...` を
+        //   4. `remark-zenn-mermaid`:   ` ```mermaid ` コードフェンスを
+        //      `<zenn-mermaid>` MDC コンポーネントに昇格 (クライアント側で
+        //      動的 import して描画)
+        //   5. `remark-zenn-image`:     Zenn の `/images/...` を
         //      `/articles-images/...` に書き換え
-        //   5. `remark-math`:           `$...$` / `$$...$$` を math ノードに
+        //   6. `remark-math`:           `$...$` / `$$...$$` を math ノードに
         //                               昇格 (後段 rehype-katex が HTML 化)
         //
         // rehype:
@@ -230,6 +244,11 @@ export default defineNuxtConfig({
             options: {
               fetchOgp: buildFetchOgp(),
             },
+          },
+          'remark-zenn-mermaid': {
+            instance: remarkZennMermaid,
+            src: REMARK_ZENN_MERMAID_PATH,
+            options: {},
           },
           'remark-zenn-image': {
             instance: remarkZennImage,
