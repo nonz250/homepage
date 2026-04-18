@@ -15,41 +15,44 @@ import remarkZennContainer from '../../../utils/markdown/remarkZennContainer'
 import remarkZennEmbed, {
   INVALID_ZENN_EMBED_ERROR_PREFIX,
 } from '../../../utils/markdown/remarkZennEmbed'
+import remarkZennTweet from '../../../utils/markdown/remarkZennTweet'
+import remarkZennGist from '../../../utils/markdown/remarkZennGist'
 import rehypeAssertNoZennLeftovers, {
   UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX,
 } from '../../../utils/markdown/rehypeAssertNoZennLeftovers'
 
 /**
- * Phase 3 対応予定の Zenn 記法が、Phase 3 未対応 Batch の時点では
- * ビルドを fail させる契約テスト。
+ * Phase 3 Batch C2 時点で「未対応のまま残っている Zenn 記法」がビルドを
+ * fail させる契約テスト。
  *
- * 対象記法:
- *   - `@[card](url)`:    Phase 3 Batch B で対応済み (本テストからは除外)
- *   - `@[tweet](url)`:   X/Twitter 埋め込み (Phase 3 Batch C)
- *   - `@[gist](url)`:    GitHub Gist 埋め込み (Phase 3 Batch C)
- *   - `@[mermaid]`:      mermaid 図 (Phase 3 Batch C)
- *   - ` ```mermaid `:    mermaid code fence (Phase 3 Batch C)
+ * 本テストの対象:
+ *   - `@[card](url)`:    Phase 3 Batch B で対応済み (throw しないことを確認)
+ *   - `@[tweet](url)`:   Phase 3 Batch C2 で対応済み (throw しないことを確認)
+ *   - `@[gist](url)`:    Phase 3 Batch C2 で対応済み (throw しないことを確認)
+ *   - `@[mermaid]`:      inline directive は意図的に未対応 (throw する)
+ *   - `:::warning` 等:   未対応コンテナ (throw する)
  *
  * 目的:
- *   - Phase 3 スコープに含まれる機能がフェーズ中途半端で漏れると、
- *     本番記事で「レンダリングされない謎のテキスト」が静かに出てしまう
- *   - 本テストは fixture md を pipeline に流し、Batch C 未対応時点では
- *     確実に throw されることを保証する
- *   - Phase 3 でこれらの機能を追加した時、本テストは意図的に更新する
- *     (fixture を移動する or 対応済みとして削除) 契約として機能する
+ *   - Phase 3 未対応の記法が本番記事に紛れ込んで「レンダリングされない謎の
+ *     テキスト」になるのを防ぐ
+ *   - 各 Batch で対応完了した記法は、対応済み経路に切り替わったことを
+ *     回帰テストとして固定する
  */
 
 /**
- * Phase 2 時点の remark + rehype パイプラインを構築する。
- * nuxt.config.ts に登録している順序を忠実に再現し、実ビルドと同じ
- * 挙動で fail するかを検証する。
+ * Phase 3 Batch C2 時点の remark + rehype パイプラインを構築する。
+ * nuxt.config.ts に登録している順序を忠実に再現する。ただし OGP fetch を
+ * 要する `remarkZennCard` は別途統合テストに任せ、本ファイルでは組み込まない
+ * (ネットワーク依存を避ける)。
  */
-function buildPhase2Pipeline() {
+function buildPipeline() {
   return unified()
     .use(remarkParse)
     .use(remarkMdc)
     .use(remarkZennContainer)
     .use(remarkZennEmbed)
+    .use(remarkZennTweet)
+    .use(remarkZennGist)
     .use(remarkZennImage)
     .use(remarkMath)
     .use(remarkRehype)
@@ -80,7 +83,7 @@ function loadFixtureBody(fileName: string): string {
  * pipeline を実行し、throw した場合は Error を返す (throw せず)。
  */
 function tryRunPipeline(md: string): Error | null {
-  const processor = buildPhase2Pipeline()
+  const processor = buildPipeline()
   try {
     const mdast = processor.parse(md) as MdastRoot
     processor.runSync(mdast) as HastRoot
@@ -91,40 +94,37 @@ function tryRunPipeline(md: string): Error | null {
   }
 }
 
-describe('phase 3 zenn syntax fails build in phase 2', () => {
-  describe('@[card]', () => {
-    it('does not throw any more (supported since Phase 3 Batch B)', () => {
-      // Phase 3 Batch B で `@[card](url)` は `remarkZennCard` により
-      // `<zenn-embed-card>` 相当の containerComponent に変換されるように
-      // なったため、本 Phase 2 互換 pipeline (remarkZennCard を含まない)
-      // でも `rehypeAssertNoZennLeftovers` の SUPPORTED_EMBED_NAMES に
-      // `'card'` が追加されたことで build fail しない。
+describe('phase 3 zenn syntax build status', () => {
+  describe('@[card] (supported since Phase 3 Batch B)', () => {
+    it('does not throw for fixture containing @[card](url)', () => {
       const md = loadFixtureBody('unsupported-card.md')
       const error = tryRunPipeline(md)
       expect(error).toBeNull()
     })
   })
 
-  describe('@[tweet]', () => {
-    it('throws build error for fixture containing @[tweet](url)', () => {
+  describe('@[tweet] (supported since Phase 3 Batch C2)', () => {
+    it('does not throw for fixture containing @[tweet](url)', () => {
+      // fixture の URL は `twitter.com/user/status/<id>` 形式なので
+      // remarkZennTweet が正常に containerComponent 化し、下流は fail しない。
       const md = loadFixtureBody('unsupported-tweet.md')
       const error = tryRunPipeline(md)
-      expect(error).not.toBeNull()
-      expect(error?.message).toMatch(/tweet/)
+      expect(error).toBeNull()
     })
   })
 
-  describe('@[gist]', () => {
-    it('throws build error for fixture containing @[gist](url)', () => {
+  describe('@[gist] (supported since Phase 3 Batch C2)', () => {
+    it('does not throw for fixture containing @[gist](url)', () => {
       const md = loadFixtureBody('unsupported-gist.md')
       const error = tryRunPipeline(md)
-      expect(error).not.toBeNull()
-      expect(error?.message).toMatch(/gist/)
+      expect(error).toBeNull()
     })
   })
 
-  describe('@[mermaid] directive', () => {
-    it('throws build error for fixture containing @[mermaid] (fails before mermaid code fence)', () => {
+  describe('@[mermaid] directive (still unsupported)', () => {
+    it('throws build error for fixture containing @[mermaid] (inline directive)', () => {
+      // inline directive 形式は Phase 3 でも意図的に未対応のまま。
+      // rehypeAssertNoZennLeftovers の span 検知で throw する契約を固定する。
       const md = loadFixtureBody('unsupported-mermaid.md')
       const error = tryRunPipeline(md)
       expect(error).not.toBeNull()
@@ -132,17 +132,17 @@ describe('phase 3 zenn syntax fails build in phase 2', () => {
     })
   })
 
-  describe('error prefix surface', () => {
+  describe('error prefix surface (for still-unsupported directives)', () => {
     it('uses the known error prefix from either remark-zenn-embed or rehype-assert', () => {
       // 本プラグイン郡では 2 種類の build fail 経路がある:
       //   1. `remarkZennEmbed`: `@[youtube]` など「サポート対象サービスだが
       //      ID/URL が invalid」 (INVALID_ZENN_EMBED_ERROR_PREFIX)
-      //   2. `rehypeAssertNoZennLeftovers`: サポート外サービス `@[tweet]` など
-      //      (UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX)
+      //   2. `rehypeAssertNoZennLeftovers`: サポート外サービス (例: 未対応の
+      //      `@[mermaid]` inline directive) (UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX)
       //
-      // Phase 3 Batch C 未対応の `@[tweet]` は (2) 経由で落ちるべきで、
-      // メッセージ prefix が識別可能な形で含まれていることを担保する。
-      const md = loadFixtureBody('unsupported-tweet.md')
+      // 依然として (2) 経由で落ちる `@[mermaid]` inline で prefix が識別可能な
+      // 形で含まれていることを担保する。
+      const md = loadFixtureBody('unsupported-mermaid.md')
       const error = tryRunPipeline(md)
       expect(error).not.toBeNull()
       expect([

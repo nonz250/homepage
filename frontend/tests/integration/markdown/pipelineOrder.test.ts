@@ -11,10 +11,14 @@ import type { Root as HastRoot } from 'hast'
 import remarkZennImage from '../../../utils/markdown/remarkZennImage'
 import remarkZennContainer from '../../../utils/markdown/remarkZennContainer'
 import remarkZennEmbed from '../../../utils/markdown/remarkZennEmbed'
+import remarkZennTweet from '../../../utils/markdown/remarkZennTweet'
+import remarkZennGist from '../../../utils/markdown/remarkZennGist'
 import remarkZennMermaid from '../../../utils/markdown/remarkZennMermaid'
 import rehypeAssertNoZennLeftovers from '../../../utils/markdown/rehypeAssertNoZennLeftovers'
 import {
   ZENN_DETAILS_TAG,
+  ZENN_EMBED_GIST_TAG,
+  ZENN_EMBED_TWEET_TAG,
   ZENN_EMBED_YOUTUBE_TAG,
   ZENN_MERMAID_TAG,
   ZENN_MESSAGE_TAG,
@@ -42,17 +46,19 @@ import {
 /**
  * 統合パイプラインを走らせ、最終 HAST を得るヘルパー。
  *
- * 順序は Phase 3 Batch C1 時点の設計:
+ * 順序は Phase 3 Batch C2 時点の設計:
  *   1. remarkParse  (md → mdast)
  *   2. remarkMdc    (MDC 記法の初期パース)
  *   3. remarkZennContainer (残った Zenn コンテナ記法を MDC ノード化)
  *   4. remarkZennEmbed     (Zenn 埋め込み記法を MDC ノード化)
- *   5. remarkZennMermaid   (```mermaid コードフェンスを <zenn-mermaid> に)
- *   6. remarkZennImage     (/images/... → /articles-images/...)
- *   7. remarkMath   ($...$ を math ノードに)
- *   8. remarkRehype (mdast → hast)
- *   9. rehypeKatex  (math ノードを KaTeX HTML に)
- *  10. rehypeAssertNoZennLeftovers (未対応記法があれば throw)
+ *   5. remarkZennTweet     (`@[tweet](url)` を <zenn-embed-tweet> に)
+ *   6. remarkZennGist      (`@[gist](url)` を <zenn-embed-gist> に)
+ *   7. remarkZennMermaid   (```mermaid コードフェンスを <zenn-mermaid> に)
+ *   8. remarkZennImage     (/images/... → /articles-images/...)
+ *   9. remarkMath   ($...$ を math ノードに)
+ *  10. remarkRehype (mdast → hast)
+ *  11. rehypeKatex  (math ノードを KaTeX HTML に)
+ *  12. rehypeAssertNoZennLeftovers (未対応記法があれば throw)
  *
  * remark-zenn-card は本テストでは OGP fetch stub が必要になるため、統合
  * 専用テスト (`zennCardPipeline.test.ts`) に切り出している。本ファイルは
@@ -64,6 +70,8 @@ function runPipeline(md: string): HastRoot {
     .use(remarkMdc)
     .use(remarkZennContainer)
     .use(remarkZennEmbed)
+    .use(remarkZennTweet)
+    .use(remarkZennGist)
     .use(remarkZennMermaid)
     .use(remarkZennImage)
     .use(remarkMath)
@@ -138,10 +146,16 @@ describe('zenn markdown pipeline (integration)', () => {
   })
 
   describe('unsupported syntax still fails build', () => {
-    it('throws when @[tweet] remains after Zenn embed pass', () => {
-      // `@[card]` は Phase 3 Batch B で対応済みのため対象から除外し、
-      // 未対応の `@[tweet]` で回帰を確認する。
+    it('throws when @[tweet] has an invalid URL (e.g. wrong host)', () => {
+      // Phase 3 Batch C2 で `@[tweet]` は対応済みだが、URL validator で
+      // 不正 (ここでは host が `example.com`) と判定される場合は build fail する。
       const md = '@[tweet](https://example.com/status/1)\n'
+      expect(() => runPipeline(md)).toThrow()
+    })
+
+    it('throws when @[gist] has an invalid id hash', () => {
+      // 20 文字未満の hash は validator で拒否 → build fail。
+      const md = '@[gist](https://gist.github.com/user/shortid)\n'
       expect(() => runPipeline(md)).toThrow()
     })
 
@@ -156,6 +170,31 @@ describe('zenn markdown pipeline (integration)', () => {
       // 検知パターンで throw する契約を回帰で固定する。
       const md = '@[mermaid]\n'
       expect(() => runPipeline(md)).toThrow()
+    })
+  })
+
+  describe('tweet and gist embeds render as MDC components', () => {
+    it('transforms @[tweet](twitter URL) into a <zenn-embed-tweet> element', () => {
+      const md = '@[tweet](https://twitter.com/user/status/1234567890123456789)\n'
+      const html = runPipelineToHtml(md)
+      expect(html).toContain(`<${ZENN_EMBED_TWEET_TAG}`)
+      expect(html).toContain('id="1234567890123456789"')
+    })
+
+    it('transforms @[tweet](x.com URL) into a <zenn-embed-tweet> element', () => {
+      const md = '@[tweet](https://x.com/user/status/42)\n'
+      const html = runPipelineToHtml(md)
+      expect(html).toContain(`<${ZENN_EMBED_TWEET_TAG}`)
+      expect(html).toContain('id="42"')
+    })
+
+    it('transforms @[gist](URL) into a <zenn-embed-gist> element with user/id', () => {
+      const md =
+        '@[gist](https://gist.github.com/nonz250/abcdef1234567890abcdef1234567890)\n'
+      const html = runPipelineToHtml(md)
+      expect(html).toContain(`<${ZENN_EMBED_GIST_TAG}`)
+      expect(html).toContain('user="nonz250"')
+      expect(html).toContain('id="abcdef1234567890abcdef1234567890"')
     })
   })
 

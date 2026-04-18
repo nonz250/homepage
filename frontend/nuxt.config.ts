@@ -16,6 +16,8 @@ import remarkZennImage from './utils/markdown/remarkZennImage'
 import remarkZennContainer from './utils/markdown/remarkZennContainer'
 import remarkZennEmbed from './utils/markdown/remarkZennEmbed'
 import remarkZennCard from './utils/markdown/remarkZennCard'
+import remarkZennTweet from './utils/markdown/remarkZennTweet'
+import remarkZennGist from './utils/markdown/remarkZennGist'
 import remarkZennMermaid from './utils/markdown/remarkZennMermaid'
 import rehypeAssertNoZennLeftovers from './utils/markdown/rehypeAssertNoZennLeftovers'
 import type { FetchOgpFn } from './utils/markdown/remarkZennCard'
@@ -96,6 +98,24 @@ const REMARK_ZENN_EMBED_PATH = resolve(
 const REMARK_ZENN_CARD_PATH = resolve(
   __dirname,
   './utils/markdown/remarkZennCard.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennTweet`) の絶対パス。
+ * `@[tweet](URL)` を `<zenn-embed-tweet>` MDC コンポーネントに変換する。
+ */
+const REMARK_ZENN_TWEET_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennTweet.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennGist`) の絶対パス。
+ * `@[gist](URL)` を `<zenn-embed-gist>` MDC コンポーネントに変換する。
+ */
+const REMARK_ZENN_GIST_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennGist.ts',
 )
 
 /**
@@ -214,12 +234,16 @@ export default defineNuxtConfig({
         //   3. `remark-zenn-card`:      `@[card](url)` を `zenn-embed-card` に
         //      昇格し、build 時に OGP を取得して props を埋め込む
         //      (NO_NETWORK_FETCH=1 時は failure stub で fallback)
-        //   4. `remark-zenn-mermaid`:   ` ```mermaid ` コードフェンスを
+        //   4. `remark-zenn-tweet`:     `@[tweet](url)` を `zenn-embed-tweet` に
+        //      昇格 (Twitter/X URL から Tweet ID 抽出 + バリデーション)
+        //   5. `remark-zenn-gist`:      `@[gist](url)` を `zenn-embed-gist` に
+        //      昇格 (Gist URL から user/id 抽出 + バリデーション)
+        //   6. `remark-zenn-mermaid`:   ` ```mermaid ` コードフェンスを
         //      `<zenn-mermaid>` MDC コンポーネントに昇格 (クライアント側で
         //      動的 import して描画)
-        //   5. `remark-zenn-image`:     Zenn の `/images/...` を
+        //   7. `remark-zenn-image`:     Zenn の `/images/...` を
         //      `/articles-images/...` に書き換え
-        //   6. `remark-math`:           `$...$` / `$$...$$` を math ノードに
+        //   8. `remark-math`:           `$...$` / `$$...$$` を math ノードに
         //                               昇格 (後段 rehype-katex が HTML 化)
         //
         // rehype:
@@ -244,6 +268,16 @@ export default defineNuxtConfig({
             options: {
               fetchOgp: buildFetchOgp(),
             },
+          },
+          'remark-zenn-tweet': {
+            instance: remarkZennTweet,
+            src: REMARK_ZENN_TWEET_PATH,
+            options: {},
+          },
+          'remark-zenn-gist': {
+            instance: remarkZennGist,
+            src: REMARK_ZENN_GIST_PATH,
+            options: {},
           },
           'remark-zenn-mermaid': {
             instance: remarkZennMermaid,
