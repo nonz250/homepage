@@ -10,6 +10,7 @@ import {
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
 import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
+import { RSS_FEED_PATH } from './constants/rss'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -342,7 +343,9 @@ export default defineNuxtConfig({
       crawlLinks: true,
       // 明示的に prerender する静的ルート。articles 個別ページの
       // 動的ルートは `nitro:config` hook 内で追加する。
-      routes: ['/', '/articles'],
+      // `/feed.xml` は Phase 4 Batch A の RSS 配信パス。generate 時に
+      // `.output/public/feed.xml` として emit される。
+      routes: ['/', '/articles', RSS_FEED_PATH],
     },
   },
 
