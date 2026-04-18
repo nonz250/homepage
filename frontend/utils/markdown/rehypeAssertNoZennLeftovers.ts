@@ -49,7 +49,8 @@ const SUPPORTED_CONTAINER_NAMES: readonly string[] = Object.freeze([
  */
 const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
   // Zenn 専用 MDC コンポーネント (remark-zenn-container / remark-zenn-embed /
-  // remark-zenn-card / remark-zenn-mermaid が生成する kebab-case タグ名)。
+  // remark-zenn-card / remark-zenn-mermaid / remark-zenn-tweet /
+  // remark-zenn-gist が生成する kebab-case タグ名)。
   'zenn-message',
   'zenn-details',
   'zenn-embed-you-tube',
@@ -58,6 +59,8 @@ const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
   'zenn-embed-stack-blitz',
   'zenn-embed-card',
   'zenn-mermaid',
+  'zenn-embed-tweet',
+  'zenn-embed-gist',
 ])
 
 /**
@@ -113,6 +116,10 @@ const ZENN_EMBED_DIRECTIVE_PATTERN = /@\[([A-Za-z][A-Za-z0-9_-]*)\]/g
  *   (`remarkZennEmbed`)
  * - `card`: Phase 3 Batch B で対応 (`remarkZennCard`)。変換失敗した場合も
  *   fallback card に落とすため、ここに到達する時点で何かが壊れている扱い。
+ * - `tweet` / `gist`: Phase 3 Batch C2 で対応 (`remarkZennTweet` /
+ *   `remarkZennGist`)。どちらも URL 検証で不正時は上流の remark プラグインが
+ *   build fail を投げるため、ここに到達する時点では正しく MDC コンテナ化
+ *   されているはず。
  *
  * 注意: これらの name は remark プラグインが処理すると HAST に link として
  * 残らないはずなので、ここに来る時点で未変換 = 失敗扱い。
@@ -123,6 +130,8 @@ const SUPPORTED_EMBED_NAMES: readonly string[] = Object.freeze([
   'codesandbox',
   'stackblitz',
   'card',
+  'tweet',
+  'gist',
 ])
 
 /**

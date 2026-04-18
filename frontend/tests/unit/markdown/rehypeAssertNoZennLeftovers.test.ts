@@ -71,7 +71,7 @@ describe('rehypeAssertNoZennLeftovers', () => {
     })
   })
 
-  describe('unsupported embed directives', () => {
+  describe('supported embed directives (no throw)', () => {
     it('does not throw on `@[card](url)` (supported since Phase 3 Batch B)', () => {
       // `card` は remark-zenn-card が処理して containerComponent に変換する
       // 想定だが、万一素通しされて hast に link として残ったとしても、本
@@ -83,22 +83,33 @@ describe('rehypeAssertNoZennLeftovers', () => {
       ).not.toThrow()
     })
 
-    it('throws on `@[tweet]` leftover', () => {
+    it('does not throw on `@[tweet](url)` (supported since Phase 3 Batch C2)', () => {
       expect(() =>
         processMarkdownToHast('see @[tweet](https://example.com)\n'),
-      ).toThrowError(/tweet/)
+      ).not.toThrow()
     })
 
+    it('does not throw on `@[gist](url)` (supported since Phase 3 Batch C2)', () => {
+      expect(() =>
+        processMarkdownToHast('before @[gist](url) after\n'),
+      ).not.toThrow()
+    })
+  })
+
+  describe('unsupported embed directives', () => {
     it('throws on `@[mermaid]` leftover', () => {
       expect(() =>
         processMarkdownToHast('@[mermaid]\n'),
       ).toThrowError(/mermaid/)
     })
 
-    it('includes the raw `@[name]` in the error message', () => {
+    it('throws on an unknown @[slideshare] leftover', () => {
+      // 将来別種の service が出たときにも確実に弾く。
       expect(() =>
-        processMarkdownToHast('before @[gist](url) after\n'),
-      ).toThrowError(/@\[gist\]/)
+        processMarkdownToHast(
+          'example @[slideshare](https://example.com)\n',
+        ),
+      ).toThrowError(/@\[slideshare\]/)
     })
   })
 
@@ -122,15 +133,20 @@ describe('rehypeAssertNoZennLeftovers', () => {
   })
 
   describe('mixed cases', () => {
-    it('throws only on unsupported names when mixed with supported card', () => {
-      // `@[card]` は Phase 3 Batch B で許可済み、`@[tweet]` は未対応のまま。
-      // 混在時は tweet のみ throw 理由に含まれること。
+    it('throws only on unsupported names when mixed with supported embeds', () => {
+      // Phase 3 Batch C2 以降、`@[card]` / `@[tweet]` / `@[gist]` はすべて
+      // 許可済みで throw しない。未対応 (`@[slideshare]`) と `:::warning`
+      // コンテナのみ throw 理由に含まれること。
       const md = [
         'intro',
         '',
         '@[card](https://example.com)',
         '',
-        '@[tweet](https://example.com/status/1)',
+        '@[tweet](https://twitter.com/u/status/1)',
+        '',
+        '@[gist](https://gist.github.com/u/abcdef1234567890abcd)',
+        '',
+        '@[slideshare](https://example.com)',
         '',
         ':::warning',
         'body',
@@ -138,7 +154,7 @@ describe('rehypeAssertNoZennLeftovers', () => {
         '',
       ].join('\n')
       const attempt = () => processMarkdownToHast(md)
-      expect(attempt).toThrowError(/@\[tweet\]/)
+      expect(attempt).toThrowError(/@\[slideshare\]/)
       expect(attempt).toThrowError(/warning/)
     })
   })
@@ -275,6 +291,32 @@ describe('rehypeAssertNoZennLeftovers', () => {
      */
     it('does not throw for a <zenn-mermaid> element', () => {
       const md = [':::zenn-mermaid', ':::', ''].join('\n')
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMdc)
+        .use(remarkRehype, { allowDangerousHtml: false })
+        .use(rehypeAssertNoZennLeftovers)
+      expect(() => processor.runSync(processor.parse(md))).not.toThrow()
+    })
+  })
+
+  describe('zenn-embed-tweet / zenn-embed-gist are listed in KNOWN_MDC_RESULT_TAGS', () => {
+    /**
+     * Phase 3 Batch C2 で追加した `<zenn-embed-tweet>` / `<zenn-embed-gist>`
+     * タグが allowlist に含まれていることを確認するための回帰テスト。
+     */
+    it('does not throw for a <zenn-embed-tweet> element', () => {
+      const md = [':::zenn-embed-tweet', ':::', ''].join('\n')
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMdc)
+        .use(remarkRehype, { allowDangerousHtml: false })
+        .use(rehypeAssertNoZennLeftovers)
+      expect(() => processor.runSync(processor.parse(md))).not.toThrow()
+    })
+
+    it('does not throw for a <zenn-embed-gist> element', () => {
+      const md = [':::zenn-embed-gist', ':::', ''].join('\n')
       const processor = unified()
         .use(remarkParse)
         .use(remarkMdc)
