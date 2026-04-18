@@ -28,9 +28,18 @@ const MISSING_SLUGS = ['not-published', 'some-future-article'] as const
  * 恒常的に 1 回出る既知の warning。本来は framework 側の問題で、Phase 1 の
  * スコープでは個別対応しない。allowlist に入れて他の新しい warning/error の
  * 検知のみを責務とする。
+ *
+ * Phase 2 で `@[youtube]` 埋め込みを記事に追加した際に以下 2 件も warning として
+ * 恒常的に出るようになった:
+ *   - `Allow attribute will take precedence over 'allowfullscreen'.`:
+ *     Chrome の iframe 属性評価で出るもの。YouTube 側の iframe 設計に起因する。
+ *   - `GPU stall due to ReadPixels`: Chrome の WebGL ドライバ警告。CI の
+ *     headless 環境でもたまに出る。記事の挙動とは無関係。
  */
 const KNOWN_HYDRATION_WARNINGS: readonly string[] = [
   'Hydration completed but contains mismatches.',
+  "Allow attribute will take precedence over 'allowfullscreen'.",
+  'GPU stall due to ReadPixels',
 ]
 
 /**
