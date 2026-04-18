@@ -17,7 +17,10 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    include: ['tests/**/*.test.ts'],
+    // `.test.ts` は既存のテストケース、`.spec.ts` は Zenn ゴールデン比較など
+    // 「仕様 / golden 検証」系のテストケース。Playwright e2e とファイル名が
+    // 被らないよう、e2e 側は `tests/e2e/**` に隔離し exclude で外している。
+    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
     exclude: ['tests/e2e/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
