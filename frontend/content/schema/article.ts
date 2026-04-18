@@ -1,4 +1,4 @@
-import { z } from '@nuxt/content'
+import { z } from 'zod'
 import {
   ARTICLE_TITLE_MAX_LENGTH,
   ARTICLE_TITLE_MIN_LENGTH,
@@ -10,8 +10,10 @@ import {
  * 記事 frontmatter のバリデーションスキーマ。
  *
  * content.config.ts と単体テストの双方から import して利用する。
- * @nuxt/content v3 は zod ベースで schema を要求するため、同梱の `z` を
- * 再利用している。
+ * @nuxt/content v3 は内部で zod を利用するため、ここでも同じ zod を直接
+ * 参照する (`z.infer` のような type-level namespace を使うには zod を値
+ * だけでなく型空間でも公開している必要があり、`@nuxt/content` の再 export
+ * された `z` は value のみで namespace を形成しないため)。
  */
 export const articleFrontmatterSchema = z.object({
   title: z
