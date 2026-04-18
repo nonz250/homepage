@@ -15,7 +15,25 @@ import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
 import remarkZennContainer from './utils/markdown/remarkZennContainer'
 import remarkZennEmbed from './utils/markdown/remarkZennEmbed'
+import remarkZennCard from './utils/markdown/remarkZennCard'
+import remarkZennTweet from './utils/markdown/remarkZennTweet'
+import remarkZennGist from './utils/markdown/remarkZennGist'
+import remarkZennMermaid from './utils/markdown/remarkZennMermaid'
 import rehypeAssertNoZennLeftovers from './utils/markdown/rehypeAssertNoZennLeftovers'
+import type { FetchOgpFn } from './utils/markdown/remarkZennCard'
+import type { OgpFailure } from './utils/ogp/fetchOgp'
+import { fetchOgp } from './utils/ogp/fetchOgp'
+import { createNodeHttpClient } from './utils/ogp/httpClient.node'
+import { createFileSystemOgpCache } from './utils/ogp/ogpCache'
+import { extractOgp } from './utils/ogp/extractOgp'
+import { downloadImage } from './utils/ogp/downloadImage'
+import { sanitizeOgp } from './utils/ogp/sanitizeOgp'
+import {
+  OGP_FETCH_MAX_BYTES,
+  OGP_FETCH_MAX_REDIRECTS,
+  OGP_FETCH_TIMEOUT_MS,
+  OGP_USER_AGENT,
+} from './constants/ogp'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
@@ -73,6 +91,44 @@ const REMARK_ZENN_EMBED_PATH = resolve(
 )
 
 /**
+ * 自作 remark プラグイン (`remarkZennCard`) の絶対パス。
+ * Zenn 独自の外部リンクカード記法 (`@[card](url)`) を build 時に
+ * OGP 取得付きで MDC コンポーネントに変換する。
+ */
+const REMARK_ZENN_CARD_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennCard.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennTweet`) の絶対パス。
+ * `@[tweet](URL)` を `<zenn-embed-tweet>` MDC コンポーネントに変換する。
+ */
+const REMARK_ZENN_TWEET_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennTweet.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennGist`) の絶対パス。
+ * `@[gist](URL)` を `<zenn-embed-gist>` MDC コンポーネントに変換する。
+ */
+const REMARK_ZENN_GIST_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennGist.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennMermaid`) の絶対パス。
+ * ` ```mermaid ` コードフェンスを `<zenn-mermaid>` MDC コンポーネントに
+ * 変換し、クライアント側での動的 import 描画に橋渡しする。
+ */
+const REMARK_ZENN_MERMAID_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennMermaid.ts',
+)
+
+/**
  * 自作 rehype プラグイン (`rehypeAssertNoZennLeftovers`) の絶対パス。
  * 未対応 Zenn 記法 (`@[card]` / `:::warning` 等) が rehype 段階で残留
  * していた場合にビルドを fail させる安全網。
@@ -96,6 +152,53 @@ const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 
 /** 予約投稿判定などに用いる prerender 実行時刻は常に現在時刻とする */
 const getBuildTime = (): Date => new Date()
+
+/**
+ * OGP 取得関数を組み立てる。
+ *
+ *   - `NO_NETWORK_FETCH=1` (CI, ユニットテスト等) のときは常に failure を
+ *     返す stub を返す (外部 fetch を 1 回も呼ばない)。
+ *   - それ以外は `createNodeHttpClient` + `createFileSystemOgpCache` +
+ *     `extractOgp` + `downloadImage` + `sanitizeOgp` を合成した本番実装を返す。
+ *
+ * 失敗時は remarkZennCard が fallback カードに倒すため、generate 全体は
+ * 継続する。
+ */
+function buildFetchOgp(): FetchOgpFn {
+  if (process.env.NO_NETWORK_FETCH === '1') {
+    return async (url: string) => {
+      const failure: OgpFailure = {
+        ok: false,
+        url,
+        reason: 'no_network_fetch',
+      }
+      return failure
+    }
+  }
+  const client = createNodeHttpClient()
+  const cache = createFileSystemOgpCache()
+  const imageDownloader = async (imageUrl: string): Promise<string | null> => {
+    return downloadImage(imageUrl, { client })
+  }
+  return async (url: string) =>
+    fetchOgp(url, {
+      client,
+      cache,
+      sanitize: sanitizeOgp,
+      // `extractOgp` は async (`Promise<RawOgp>`) だが fetchOgp 側は sync /
+      // async 両対応 (`await` する) なのでそのまま渡せる。
+      extractOgp,
+      httpOptions: {
+        timeoutMs: OGP_FETCH_TIMEOUT_MS,
+        maxBytes: OGP_FETCH_MAX_BYTES,
+        maxRedirects: OGP_FETCH_MAX_REDIRECTS,
+        userAgent: OGP_USER_AGENT,
+        credentials: 'omit',
+      },
+      now: () => Date.now(),
+      imageDownloader,
+    })
+}
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -128,9 +231,19 @@ export default defineNuxtConfig({
         //      `zenn-*` MDC コンテナに昇格 / リネーム
         //   2. `remark-zenn-embed`:     `@[service](url)` を
         //      `zenn-embed-*` MDC コンテナに昇格 (URL 正規化 + バリデーション)
-        //   3. `remark-zenn-image`:     Zenn の `/images/...` を
+        //   3. `remark-zenn-card`:      `@[card](url)` を `zenn-embed-card` に
+        //      昇格し、build 時に OGP を取得して props を埋め込む
+        //      (NO_NETWORK_FETCH=1 時は failure stub で fallback)
+        //   4. `remark-zenn-tweet`:     `@[tweet](url)` を `zenn-embed-tweet` に
+        //      昇格 (Twitter/X URL から Tweet ID 抽出 + バリデーション)
+        //   5. `remark-zenn-gist`:      `@[gist](url)` を `zenn-embed-gist` に
+        //      昇格 (Gist URL から user/id 抽出 + バリデーション)
+        //   6. `remark-zenn-mermaid`:   ` ```mermaid ` コードフェンスを
+        //      `<zenn-mermaid>` MDC コンポーネントに昇格 (クライアント側で
+        //      動的 import して描画)
+        //   7. `remark-zenn-image`:     Zenn の `/images/...` を
         //      `/articles-images/...` に書き換え
-        //   4. `remark-math`:           `$...$` / `$$...$$` を math ノードに
+        //   8. `remark-math`:           `$...$` / `$$...$$` を math ノードに
         //                               昇格 (後段 rehype-katex が HTML 化)
         //
         // rehype:
@@ -147,6 +260,28 @@ export default defineNuxtConfig({
           'remark-zenn-embed': {
             instance: remarkZennEmbed,
             src: REMARK_ZENN_EMBED_PATH,
+            options: {},
+          },
+          'remark-zenn-card': {
+            instance: remarkZennCard,
+            src: REMARK_ZENN_CARD_PATH,
+            options: {
+              fetchOgp: buildFetchOgp(),
+            },
+          },
+          'remark-zenn-tweet': {
+            instance: remarkZennTweet,
+            src: REMARK_ZENN_TWEET_PATH,
+            options: {},
+          },
+          'remark-zenn-gist': {
+            instance: remarkZennGist,
+            src: REMARK_ZENN_GIST_PATH,
+            options: {},
+          },
+          'remark-zenn-mermaid': {
+            instance: remarkZennMermaid,
+            src: REMARK_ZENN_MERMAID_PATH,
             options: {},
           },
           'remark-zenn-image': {

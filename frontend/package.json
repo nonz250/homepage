@@ -19,6 +19,7 @@
     "@nuxt/content": "^3.13.0",
     "@playwright/test": "^1.59.1",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/sanitize-html": "^2.16.1",
     "@vitest/coverage-v8": "^4.1.4",
     "@vue/test-utils": "^2.4.6",
     "better-sqlite3": "^12.9.0",
@@ -29,10 +30,15 @@
     "katex": "^0.16.45",
     "material-icons": "^1.13.1",
     "nuxt": "^3.19.0",
+    "open-graph-scraper": "^6.11.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
+    "sanitize-html": "^2.17.3",
     "sass": "^1.57.1",
     "vitest": "^4.1.4",
     "zenn-markdown-html": "^0.4.7"
+  },
+  "dependencies": {
+    "mermaid": "^11.14.0"
   }
 }

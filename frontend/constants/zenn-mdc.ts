@@ -55,3 +55,41 @@ export const ZENN_EMBED_CODESANDBOX_TAG = 'zenn-embed-code-sandbox'
  * `@[stackblitz]` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
  */
 export const ZENN_EMBED_STACKBLITZ_TAG = 'zenn-embed-stack-blitz'
+
+/**
+ * `@[card](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedCard.vue` と対応する。build 時に OGP を取得し、成功時は
+ * 取得したメタデータ、失敗時は URL ホスト名を fallback として props に載せる。
+ */
+export const ZENN_EMBED_CARD_TAG = 'zenn-embed-card'
+
+/**
+ * ` ```mermaid ... ``` ` コードフェンスを変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennMermaid.vue` と対応する。build 時に変換のみ行い、SVG 描画はクライアント
+ * 側で `<ClientOnly>` + `await import('mermaid')` によって行う。
+ *
+ * 注意: `@[mermaid]` inline directive 形式は本プロジェクトではサポートしない。
+ * コードフェンス記法のみを正式な入力形式とする。inline 形式が残留した場合は
+ * `rehypeAssertNoZennLeftovers` が build fail させる。
+ */
+export const ZENN_MERMAID_TAG = 'zenn-mermaid'
+
+/**
+ * `@[tweet](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedTweet.vue` と対応する。Twitter / X widgets.js をクライアント側で
+ * 動的に読み込み、`<blockquote class="twitter-tweet">` を iframe 化する。
+ * SSR / JS 無効環境では fallback として `<a>` で Tweet への外部リンクを出す。
+ */
+export const ZENN_EMBED_TWEET_TAG = 'zenn-embed-tweet'
+
+/**
+ * `@[gist](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedGist.vue` と対応する。`<script src="https://gist.github.com/
+ * <user>/<id>.js">` をクライアント側で動的挿入する。SSR / JS 無効環境では
+ * fallback として Gist への外部リンクを出す。
+ */
+export const ZENN_EMBED_GIST_TAG = 'zenn-embed-gist'

@@ -2,39 +2,30 @@ import { expect, test } from '@playwright/test'
 import type { ConsoleMessage } from '@playwright/test'
 
 /**
- * /articles 関連の E2E テスト。
+ * /articles 関連の E2E スモークテスト。
  *
- * generate 済みの静的サイト (frontend/.output/public/) を http-server で配信し、
- * production 相当のルーティングと HTML をブラウザ視点で検査する。
+ * 生成済みの静的サイト (frontend/.output/public/) を http-server で配信し、
+ * 記事のコンテンツには依存しない範囲でページが動作することだけを確認する。
+ * 具体的な記事タイトルや本文への依存は「記事を足した / 消した」たびに
+ * テストが壊れるので、ここでは避ける。記事のレンダリング契約は unit test
+ * (Markdown pipeline / MDC components) と build-artifact-scan で担保する。
  *
  * 検証観点:
- *   - `/articles` が 200 で、公開記事のタイトルが描画される
- *   - `/articles/hello` 詳細が 200 で、<h1> とタイトル、<main> に本文がある
- *   - 公開されていない slug を直打ちしたら 404 になる
- *   - console.error / console.warning が 0 件 (hydration warning を検知)
+ *   - `/articles` 一覧が 200
+ *   - 存在しない記事 / タグが 404
+ *   - console.error / warning が 0 (hydration warning 検知、allowlist 付き)
  */
-
-/** 公開記事の slug 一覧。現状は site-articles/ (本サイト限定) の hello 1 本のみ。 */
-const PUBLIC_SLUGS = ['hello'] as const
-
-/** 公開記事のタイトル期待値 (fixture frontmatter の title と一致) */
-const PUBLIC_ARTICLE_TITLES = ['ブログを移転しました'] as const
 
 /** 404 を期待する（prerender されない）slug のサンプル */
 const MISSING_SLUGS = ['not-published', 'some-future-article'] as const
 
+/** 存在しないタグ。404 を返すことを検証する。 */
+const MISSING_TAGS = ['nonexistent', 'made-up-tag'] as const
+
 /**
- * Nuxt 3 + SSG (http-server 配信) の組み合わせで、特定のコンテンツに依存せず
- * 恒常的に 1 回出る既知の warning。本来は framework 側の問題で、Phase 1 の
- * スコープでは個別対応しない。allowlist に入れて他の新しい warning/error の
- * 検知のみを責務とする。
- *
- * Phase 2 で `@[youtube]` 埋め込みを記事に追加した際に以下 2 件も warning として
- * 恒常的に出るようになった:
- *   - `Allow attribute will take precedence over 'allowfullscreen'.`:
- *     Chrome の iframe 属性評価で出るもの。YouTube 側の iframe 設計に起因する。
- *   - `GPU stall due to ReadPixels`: Chrome の WebGL ドライバ警告。CI の
- *     headless 環境でもたまに出る。記事の挙動とは無関係。
+ * Nuxt 3 + SSG (http-server 配信) の組み合わせで恒常的に出る既知の warning。
+ * 本来はフレームワーク側の挙動で、記事側の問題ではないので allowlist に入れる。
+ * これ以外の warning/error が出たら実装由来として検知する。
  */
 const KNOWN_HYDRATION_WARNINGS: readonly string[] = [
   'Hydration completed but contains mismatches.',
@@ -42,14 +33,6 @@ const KNOWN_HYDRATION_WARNINGS: readonly string[] = [
   'GPU stall due to ReadPixels',
 ]
 
-/**
- * console 出力を収集するヘルパー。
- * Playwright の page.on('console') は非同期なため、登録したリスナーが捕捉した
- * メッセージを配列に蓄積し、テスト内で expect する形で利用する。
- *
- * KNOWN_HYDRATION_WARNINGS に含まれるメッセージは除外し、実装起因の新しい
- * warning のみをレポートする。
- */
 function collectConsoleIssues(page: import('@playwright/test').Page): string[] {
   const issues: string[] = []
   const isKnown = (text: string): boolean =>
@@ -69,53 +52,14 @@ function collectConsoleIssues(page: import('@playwright/test').Page): string[] {
 }
 
 test.describe('articles list page', () => {
-  test('renders 200 with published article titles', async ({ page }) => {
+  test('is served as 200 without console errors', async ({ page }) => {
     const issues = collectConsoleIssues(page)
     const response = await page.goto('/articles')
     expect(response, 'navigation response should exist').not.toBeNull()
     expect(response!.status()).toBe(200)
-
     await expect(page.locator('h1')).toContainText('Articles')
-
-    const bodyText = await page.locator('body').innerText()
-    for (const title of PUBLIC_ARTICLE_TITLES) {
-      expect(bodyText).toContain(title)
-    }
-
     expect(issues, 'no console errors or hydration warnings').toEqual([])
   })
-})
-
-test.describe('articles detail page', () => {
-  test('/articles/hello renders h1 and main content', async ({ page }) => {
-    const issues = collectConsoleIssues(page)
-    const response = await page.goto('/articles/hello')
-    expect(response).not.toBeNull()
-    expect(response!.status()).toBe(200)
-
-    // ArticleHeader の h1 (class="title") が描画されている。
-    // なお、本文 Markdown の `# 見出し` は rehype-slug + ContentRenderer で
-    // 追加の h1 として出るため、ArticleHeader 側は .title クラスで一意に絞る。
-    const headerTitle = page.locator('h1.title')
-    await expect(headerTitle).toContainText('ブログを移転しました')
-
-    // 本文 (記事詳細の main) に fixture の文言が含まれる。
-    // Nuxt の default layout 側にも <main> があるため、詳細ページ側の
-    // .article-detail クラスで限定する。
-    const main = page.locator('main.article-detail')
-    await expect(main).toContainText('今後はこちらで新しい記事を更新していきます')
-
-    expect(issues, 'no console errors or hydration warnings').toEqual([])
-  })
-
-  // 公開記事すべてで 200 が返ることを確認。
-  for (const slug of PUBLIC_SLUGS) {
-    test(`/articles/${slug} is served as 200`, async ({ page }) => {
-      const response = await page.goto(`/articles/${slug}`)
-      expect(response).not.toBeNull()
-      expect(response!.status()).toBe(200)
-    })
-  }
 })
 
 test.describe('non-existent articles are not served', () => {
@@ -128,33 +72,7 @@ test.describe('non-existent articles are not served', () => {
   }
 })
 
-/**
- * 有効なタグの一覧 (site-articles/hello.md の topics と一致)。
- * `/articles/tags/[tag]` ページの 200 検証に使う。
- */
-const EXISTING_TAGS = ['blog', 'announcement'] as const
-
-/** 存在しないタグ。404 を返すことを検証する。 */
-const MISSING_TAGS = ['nonexistent', 'made-up-tag'] as const
-
-test.describe('tag listing pages', () => {
-  for (const tag of EXISTING_TAGS) {
-    test(`/articles/tags/${tag} returns 200 and lists at least one article`, async ({ page }) => {
-      const issues = collectConsoleIssues(page)
-      const response = await page.goto(`/articles/tags/${tag}`)
-      expect(response, 'navigation response should exist').not.toBeNull()
-      expect(response!.status()).toBe(200)
-
-      await expect(page.locator('h1.page-title')).toContainText(`#${tag}`)
-      // 公開記事 hello が必ず含まれている (blog / announcement 両方の topic)。
-      // layout の <main> と page の <main> が 2 つあるため、記事リストを
-      // 1 つに絞り込んでから text を確認する。
-      await expect(page.locator('.article-list')).toContainText('ブログを移転しました')
-
-      expect(issues, 'no console errors or hydration warnings').toEqual([])
-    })
-  }
-
+test.describe('tag pages', () => {
   for (const tag of MISSING_TAGS) {
     test(`/articles/tags/${tag} returns 404`, async ({ page }) => {
       const response = await page.goto(`/articles/tags/${tag}`)
@@ -165,17 +83,11 @@ test.describe('tag listing pages', () => {
 })
 
 test.describe('tags index JSON artifact', () => {
-  test('/tags.json is served as application/json and has expected shape', async ({ request }) => {
+  test('/tags.json is served and parseable', async ({ request }) => {
     const response = await request.get('/tags.json')
     expect(response.status()).toBe(200)
-    // static file 配信なので content-type は server の実装次第。
-    // 少なくとも JSON として parse 可能であることを確認する。
     const body = await response.json()
     expect(typeof body).toBe('object')
     expect(Array.isArray(body)).toBe(false)
-    for (const tag of EXISTING_TAGS) {
-      expect(Array.isArray(body[tag])).toBe(true)
-      expect(body[tag].length).toBeGreaterThan(0)
-    }
   })
 })
