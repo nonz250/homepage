@@ -3,6 +3,11 @@ import { dirname, resolve } from 'node:path'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
+import { collectSlugEntriesFromDirs } from './utils/prerender/collectSlugEntriesFromDirs'
+import {
+  detectSlugCollisions,
+  formatSlugCollisionError,
+} from './utils/prerender/detectSlugCollisions'
 import remarkZennImage from './utils/markdown/remarkZennImage'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
@@ -17,9 +22,20 @@ const isContentPreviewEnabled = isPreviewEnv && !isProductionBuild
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// リポジトリ root 直下の articles ディレクトリ (ADR V-1/V-2 参照)。
+// リポジトリ root 直下の記事ソースディレクトリ。
+// articles/ は Zenn Connect と共有するディレクトリ (ADR V-1/V-2)。
+// site-articles/ は本サイト限定で公開する記事を置くディレクトリ
+// (ADR `site-only-articles.md`)。両者は同一 `articles` コレクションとして
+// 読み込み、URL は `/articles/[slug]` に統一する。
 const ARTICLES_DIR = resolve(__dirname, '../articles')
+const SITE_ARTICLES_DIR = resolve(__dirname, '../site-articles')
 const ARTICLES_IMAGES_DIR = resolve(__dirname, '../articles/images')
+
+/**
+ * 記事 slug 衝突検知の対象ディレクトリ一覧。
+ * 配列末尾に新しいソースを追加することで、build 時のガード対象を広げられる。
+ */
+const ARTICLE_SOURCE_DIRS = [ARTICLES_DIR, SITE_ARTICLES_DIR] as const
 
 // 自作 remark プラグイン (Zenn 互換画像パス書き換え) の絶対パス。
 // @nuxtjs/mdc が生成する `mdc-imports.mjs` は `src` が指定されていれば
@@ -110,6 +126,14 @@ export default defineNuxtConfig({
       // dev モード (nuxt dev) では prerender 経路自体が無効なため早期 return。
       if (nitroConfig.dev) {
         return
+      }
+      // articles/ と site-articles/ に同じ slug の記事が存在するとどちらが
+      // 優先されるか不定になるため、ビルドを明示的に失敗させる。
+      const collisions = detectSlugCollisions(
+        collectSlugEntriesFromDirs(ARTICLE_SOURCE_DIRS),
+      )
+      if (collisions.length > 0) {
+        throw new Error(formatSlugCollisionError(collisions))
       }
       const nodeEnv = process.env.NODE_ENV
       // production build では preview を必ず false に倒す (fail-closed)。
