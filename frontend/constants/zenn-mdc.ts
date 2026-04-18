@@ -63,3 +63,15 @@ export const ZENN_EMBED_STACKBLITZ_TAG = 'zenn-embed-stack-blitz'
  * 取得したメタデータ、失敗時は URL ホスト名を fallback として props に載せる。
  */
 export const ZENN_EMBED_CARD_TAG = 'zenn-embed-card'
+
+/**
+ * ` ```mermaid ... ``` ` コードフェンスを変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennMermaid.vue` と対応する。build 時に変換のみ行い、SVG 描画はクライアント
+ * 側で `<ClientOnly>` + `await import('mermaid')` によって行う。
+ *
+ * 注意: `@[mermaid]` inline directive 形式は本プロジェクトではサポートしない。
+ * コードフェンス記法のみを正式な入力形式とする。inline 形式が残留した場合は
+ * `rehypeAssertNoZennLeftovers` が build fail させる。
+ */
+export const ZENN_MERMAID_TAG = 'zenn-mermaid'

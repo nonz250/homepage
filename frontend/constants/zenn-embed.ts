@@ -111,3 +111,22 @@ export const IFRAME_LOADING_LAZY = 'lazy'
  * デフォルト値とも整合する。
  */
 export const IFRAME_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+/**
+ * Mermaid コードフェンスを識別する言語名。
+ *
+ * ` ```mermaid\n<DSL>\n``` ` の形式を `remarkZennMermaid` が検知し、
+ * `<zenn-mermaid>` MDC コンポーネントに変換する。他の言語指定 (例: `js`,
+ * `typescript`) はこのプラグインの対象外。
+ */
+export const MERMAID_CODE_LANGUAGE = 'mermaid'
+
+/**
+ * `mermaid.render` に渡す一意 ID の接頭辞。
+ *
+ * Mermaid は `render(id, code)` で渡された ID を内部 DOM の一時要素に付与する。
+ * 同一ページ内で複数の図が共存しても ID 衝突しないよう、コンポーネント側で
+ * この接頭辞 + ランダム suffix で ID を生成する。接頭辞を named 定数として
+ * 切り出すことで、運用ログやテストでの絞り込みを容易にする。
+ */
+export const MERMAID_UNIQUE_ID_PREFIX = 'zenn-mermaid-'
