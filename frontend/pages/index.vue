@@ -171,14 +171,14 @@
     <div class="graph">
       <section id="articles" class="section content pt-1">
         <h2>Latest Articles</h2>
-        <div v-if="latestArticles.length > 0" class="articles">
-          <article-card
-            v-for="article in latestArticles"
-            :key="article.slug"
-            :article="article"
-            :is-draft="preview && !article.published"
-          />
-        </div>
+        <ul v-if="latestArticles.length > 0" class="articles">
+          <li v-for="article in latestArticles" :key="article.slug" class="articles-item">
+            <article-card
+              :article="article"
+              :is-draft="preview && !article.published"
+            />
+          </li>
+        </ul>
         <p v-else class="articles-empty">
           まだ記事がありません。
         </p>
@@ -190,7 +190,7 @@
       </section>
     </div>
 
-    <div class="graph">
+    <div class="parallax-bg">
       <section id="contact" class="section content">
         <h2>Contact me</h2>
         <div class="contact-container">
@@ -422,10 +422,16 @@ onBeforeUnmount(() => {
   }
 
   > .articles {
-    padding-bottom: 1rem;
-    display: grid;
+    margin: 0;
+    padding: 0 0 1rem 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+
+    > .articles-item {
+      width: 100%;
+    }
   }
 
   > .articles-empty {
