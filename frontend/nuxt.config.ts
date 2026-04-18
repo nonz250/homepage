@@ -142,7 +142,7 @@ export default defineNuxtConfig({
         nodeEnv === 'production'
           ? false
           : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
-      const articles = loadArticlesFromFs(ARTICLES_DIR)
+      const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
       const routes = buildPrerenderRoutes(articles, getBuildTime(), {
         preview,
         nodeEnv,
