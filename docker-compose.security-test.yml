@@ -17,9 +17,8 @@
 #   - Dockerfile の `default.conf` (proxy 版) を `test.conf` (static 版)
 #     で read-only bind mount し、同一イメージを再利用する。
 #
-# バージョン宣言は Compose v2 では任意だが、`docker-compose.prod.yml` と
-# 表記が揃うよう明示する。
-version: "3"
+# Compose v2 では `version` キーは obsolete なので意図的に省略する。
+# `docker-compose.prod.yml` 側も後続で追従する想定。
 services:
   proxy:
     build:
