@@ -68,6 +68,11 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    # fork PR では head.repo.full_name が upstream と異なるため、そこだけ
+    # NO_NETWORK_FETCH=1 に昇格させて外部 fetch を遮断する。通常 PR / main
+    # push では空文字 (fetch 実行) のままにする。
+    env:
+      NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
     defaults:
       run:
         working-directory: frontend
@@ -110,6 +115,9 @@ jobs:
     runs-on: ubuntu-latest
     # 生成成果物に対するスキャンなので、先に高速なテストを通してから回す。
     needs: [unit, integration]
+    # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
+    env:
+      NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
     defaults:
       run:
         working-directory: frontend
@@ -139,6 +147,9 @@ jobs:
     runs-on: ubuntu-latest
     # ブラウザ起動が重いので、静的テストが通ってから回す。
     needs: [unit, integration, contract]
+    # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
+    env:
+      NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
     defaults:
       run:
         working-directory: frontend
