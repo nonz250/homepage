@@ -44,6 +44,11 @@ export interface LoadedArticle extends Article, TagIndexArticle {
   readonly published: boolean
   readonly published_at?: string
   readonly topics: readonly string[]
+  /**
+   * 記事に紐づく絵文字 (Zenn 記法の `emoji` frontmatter を踏襲)。
+   * OGP 画像左上のアクセントとして利用される。未指定なら undefined。
+   */
+  readonly emoji?: string
 }
 
 /**
@@ -83,6 +88,7 @@ export function loadArticlesFromFs(
         published_at:
           typeof data.published_at === 'string' ? data.published_at : undefined,
         topics: coerceTopics(data.topics),
+        emoji: typeof data.emoji === 'string' ? data.emoji : undefined,
       })
     }
   }
