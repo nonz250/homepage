@@ -1,22 +1,26 @@
 <template>
   <nuxt-link :to="`/articles/${article.slug}`" class="v-ArticleCard">
     <article class="card">
-      <header class="card-header">
-        <h3 class="title">
-          <span v-if="article.emoji" class="emoji" aria-hidden="true">{{ article.emoji }}</span>
-          <span>{{ article.title }}</span>
-        </h3>
-        <span v-if="isDraft" class="draft-badge">Draft</span>
-      </header>
-      <div class="meta">
-        <time v-if="publishedDate" :datetime="article.published_at" class="published-at">
-          {{ publishedDate }}
-        </time>
-        <ul v-if="article.topics.length > 0" class="topics">
-          <li v-for="topic in article.topics" :key="topic" class="topic">
-            {{ topic }}
-          </li>
-        </ul>
+      <div v-if="article.emoji" class="emoji-slot" aria-hidden="true">
+        <span class="emoji">{{ article.emoji }}</span>
+      </div>
+      <div class="body">
+        <header class="card-header">
+          <h3 class="title">
+            {{ article.title }}
+          </h3>
+          <span v-if="isDraft" class="draft-badge">Draft</span>
+        </header>
+        <div class="meta">
+          <time v-if="publishedDate" :datetime="article.published_at" class="published-at">
+            {{ publishedDate }}
+          </time>
+          <ul v-if="article.topics.length > 0" class="topics">
+            <li v-for="topic in article.topics" :key="topic" class="topic">
+              {{ topic }}
+            </li>
+          </ul>
+        </div>
       </div>
     </article>
   </nuxt-link>
@@ -55,6 +59,7 @@ const publishedDate = computed<string>(() =>
 
 .v-ArticleCard {
   display: block;
+  width: 100%;
   color: color.$black;
   text-decoration: none;
 }
@@ -66,11 +71,49 @@ const publishedDate = computed<string>(() =>
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 0.5rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+
+  @media screen and (max-width: 600px) {
+    padding: 1rem 1.1rem;
+    gap: 0.85rem;
+  }
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
+}
+
+.emoji-slot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 0.5rem;
+
+  @media screen and (max-width: 600px) {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+.emoji {
+  font-size: 2rem;
+  line-height: 1;
+
+  @media screen and (max-width: 600px) {
+    font-size: 1.5rem;
+  }
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .card-header {
@@ -86,14 +129,6 @@ const publishedDate = computed<string>(() =>
   font-weight: bold;
   line-height: 1.5;
   color: color.$black;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.emoji {
-  font-size: 1.3rem;
-  line-height: 1;
 }
 
 .draft-badge {
