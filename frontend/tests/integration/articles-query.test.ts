@@ -57,7 +57,10 @@ beforeAll(() => {
   // 前回の artifact をクリアしてから generate を実行する。
   // Nuxt Content の SQLite は `.data/content/contents.sqlite` に書き出され、
   // prerender 成果物は `.output/public/` に生成される。
-  for (const dir of ['.output', '.data', '.nuxt']) {
+  // `.nuxt/` は tsconfig.json が extends で参照しているため、
+  // vitest が実行中にディレクトリごと消すと config 解決が失敗する。
+  // nuxt generate が内部で prepare を走らせて再生成するので削除しない。
+  for (const dir of ['.output', '.data']) {
     const full = resolve(FRONTEND_ROOT, dir)
     if (existsSync(full)) {
       rmSync(full, { recursive: true, force: true })
