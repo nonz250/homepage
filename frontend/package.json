@@ -37,5 +37,8 @@
     "sass": "^1.57.1",
     "vitest": "^4.1.4",
     "zenn-markdown-html": "^0.4.7"
+  },
+  "dependencies": {
+    "mermaid": "^11.14.0"
   }
 }
