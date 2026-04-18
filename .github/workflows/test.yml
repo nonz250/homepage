@@ -3,8 +3,7 @@ name: Test
 # Phase 1 Blog MVP の品質ゲート。
 #
 # ジョブ構成:
-#   typecheck           - vue-tsc による型チェック (既存コード由来の型エラーが
-#                         残っており、現状は continue-on-error で warn 扱い)
+#   typecheck           - vue-tsc による型チェック (必須ゲート)
 #   unit                - 純関数 / コンポーネント単体テスト
 #   integration         - npm run generate を走らせて .output / .data を検証
 #   contract            - CONTENT_PREVIEW などランタイム契約の固定
@@ -27,9 +26,6 @@ jobs:
     defaults:
       run:
         working-directory: frontend
-    # 既存コードベースに型エラーが散見されるため Phase 1 の間は warn 扱いとする。
-    # Phase 2 以降で 0 エラーに揃えてから continue-on-error を外す。
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
