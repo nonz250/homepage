@@ -80,7 +80,10 @@ const description: string =
 // fallback に倒すガードが `resolveArticleOgImagePath` 内に入っている。
 const runtimeConfig = useRuntimeConfig()
 const baseUrl: string = runtimeConfig.public.baseUrl
-const canonicalUrl: string = `${baseUrl}/articles/${slug}`
+// 末尾スラッシュ付きに揃える。nginx 側で `/articles/<slug>` → `/articles/<slug>/`
+// に 301 リダイレクトされるため、og:url が redirect 元のままだと SNS クローラが
+// canonical 不一致でカード表示を失敗することがある。redirect 後の URL に寄せる。
+const canonicalUrl: string = `${baseUrl}/articles/${slug}/`
 const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
 
 useHead({
