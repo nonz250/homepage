@@ -11,6 +11,9 @@ import {
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
+import remarkZennContainer from './utils/markdown/remarkZennContainer'
+import remarkZennEmbed from './utils/markdown/remarkZennEmbed'
+import rehypeAssertNoZennLeftovers from './utils/markdown/rehypeAssertNoZennLeftovers'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
@@ -45,6 +48,36 @@ const ARTICLE_SOURCE_DIRS = [ARTICLES_DIR, SITE_ARTICLES_DIR] as const
 const REMARK_ZENN_IMAGE_PATH = resolve(
   __dirname,
   './utils/markdown/remarkZennImage.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennContainer`) の絶対パス。
+ * Zenn 独自のコンテナ記法 (`:::message` / `:::details`) を MDC
+ * コンポーネント (`zenn-message` / `zenn-details`) に橋渡しする。
+ */
+const REMARK_ZENN_CONTAINER_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennContainer.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennEmbed`) の絶対パス。
+ * Zenn 独自の埋め込み記法 (`@[youtube](...)` 等) を MDC 埋め込み
+ * コンポーネントに橋渡しし、URL/ID の正規化とバリデーションも行う。
+ */
+const REMARK_ZENN_EMBED_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennEmbed.ts',
+)
+
+/**
+ * 自作 rehype プラグイン (`rehypeAssertNoZennLeftovers`) の絶対パス。
+ * 未対応 Zenn 記法 (`@[card]` / `:::warning` 等) が rehype 段階で残留
+ * していた場合にビルドを fail させる安全網。
+ */
+const REHYPE_ASSERT_NO_ZENN_LEFTOVERS_PATH = resolve(
+  __dirname,
+  './utils/markdown/rehypeAssertNoZennLeftovers.ts',
 )
 
 /**
@@ -88,17 +121,35 @@ export default defineNuxtConfig({
         // `remark-mdc` / `remark-gfm` / `remark2rehype` が含まれるため、
         // ここに追加したユーザー plugin はそれらの **後** に走る。
         //
-        // 順序の設計意図:
-        //   1. `remark-zenn-image` (既存): Zenn の `/images/...` を
+        // remark の適用順序 (`Object.entries` 挿入順で `processor.use`):
+        //   1. `remark-zenn-container`: `:::message` / `:::details` を
+        //      `zenn-*` MDC コンテナに昇格 / リネーム
+        //   2. `remark-zenn-embed`:     `@[service](url)` を
+        //      `zenn-embed-*` MDC コンテナに昇格 (URL 正規化 + バリデーション)
+        //   3. `remark-zenn-image`:     Zenn の `/images/...` を
         //      `/articles-images/...` に書き換え
-        //   2. `remark-math`: `$...$` / `$$...$$` を mdast-math ノードに
-        //      昇格 (後段 rehype-katex が HTML 化)
+        //   4. `remark-math`:           `$...$` / `$$...$$` を math ノードに
+        //                               昇格 (後段 rehype-katex が HTML 化)
+        //
+        // rehype:
+        //   1. `rehype-katex`:                     math ノードを KaTeX HTML に変換
+        //   2. `rehype-assert-no-zenn-leftovers`:  末尾に配置。未対応記法が
+        //                                          残っていれば throw して
+        //                                          build fail させる安全網
         remarkPlugins: {
+          'remark-zenn-container': {
+            instance: remarkZennContainer,
+            src: REMARK_ZENN_CONTAINER_PATH,
+            options: {},
+          },
+          'remark-zenn-embed': {
+            instance: remarkZennEmbed,
+            src: REMARK_ZENN_EMBED_PATH,
+            options: {},
+          },
           'remark-zenn-image': {
             instance: remarkZennImage,
             src: REMARK_ZENN_IMAGE_PATH,
-            // @nuxtjs/mdc の mdc-imports テンプレートが options 未指定
-            // 時に plugin オブジェクト全体を渡してしまう挙動の回避。
             options: {},
           },
           'remark-math': {
@@ -109,6 +160,11 @@ export default defineNuxtConfig({
         rehypePlugins: {
           'rehype-katex': {
             instance: rehypeKatex,
+            options: {},
+          },
+          'rehype-assert-no-zenn-leftovers': {
+            instance: rehypeAssertNoZennLeftovers,
+            src: REHYPE_ASSERT_NO_ZENN_LEFTOVERS_PATH,
             options: {},
           },
         },
