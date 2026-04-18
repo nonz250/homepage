@@ -49,7 +49,7 @@ const SUPPORTED_CONTAINER_NAMES: readonly string[] = Object.freeze([
  */
 const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
   // Zenn 専用 MDC コンポーネント (remark-zenn-container / remark-zenn-embed /
-  // remark-zenn-card が生成する kebab-case タグ名)。
+  // remark-zenn-card / remark-zenn-mermaid が生成する kebab-case タグ名)。
   'zenn-message',
   'zenn-details',
   'zenn-embed-you-tube',
@@ -57,6 +57,7 @@ const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
   'zenn-embed-code-sandbox',
   'zenn-embed-stack-blitz',
   'zenn-embed-card',
+  'zenn-mermaid',
 ])
 
 /**
@@ -74,16 +75,20 @@ const UNSUPPORTED_MDC_TAGS: ReadonlySet<string> = new Set([
 ])
 
 /**
- * フェーズ 3 以降で対応する可能性があるが、Phase 2 ではビルドを fail させる
- * コードブロック言語名 (`<code class="language-<name>">` の `<name>` 部分)。
+ * ビルドを fail させるコードブロック言語名 (`<code class="language-<name>">` の
+ * `<name>` 部分)。
  *
- * 例:
- *   ` ```mermaid\n...\n``` ` は Phase 3 で `mermaid` 描画対応予定のため、
- *   未対応のまま静かに `<code class="language-mermaid">` として残ると
- *   読者には「謎のコードブロック」として見えてしまう。build 時に明示的
- *   失敗させることで、Phase 2 時点での混入を防ぐ。
+ * Phase 3 Batch C1 で ` ```mermaid ` は `remarkZennMermaid` が
+ * `<zenn-mermaid>` MDC コンポーネントに変換するようになった。本プラグインが
+ * 走る時点で `<code class="language-mermaid">` が残っていることはなく、
+ * 変換が欠落した場合の safety net としては element allowlist
+ * (`KNOWN_MDC_RESULT_TAGS`) の方が確実に機能する。
+ *
+ * 現時点で build fail させたい language 指定は無いため空集合にしている。
+ * 将来、サポート外の重要な言語 (例: 独自 DSL) を検知したくなった場合は
+ * 要素を追加する。
  */
-const UNSUPPORTED_CODE_LANGUAGES: ReadonlySet<string> = new Set(['mermaid'])
+const UNSUPPORTED_CODE_LANGUAGES: ReadonlySet<string> = new Set<string>()
 
 /**
  * `<code>` 要素の className から `language-*` 指定を取り出すための接頭辞。

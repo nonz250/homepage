@@ -143,15 +143,20 @@ describe('rehypeAssertNoZennLeftovers', () => {
     })
   })
 
-  describe('unsupported code block languages', () => {
+  describe('code block languages (mermaid now supported via remarkZennMermaid)', () => {
     /**
-     * ` ```mermaid ` のようなコードフェンスは remark-rehype により
-     * `<pre><code class="language-mermaid">` に変換される。Phase 3 で
-     * 対応予定の言語は Phase 2 時点では build fail させる。
+     * Phase 3 Batch C1 以降、 ```mermaid コードフェンスは `remarkZennMermaid`
+     * が `<zenn-mermaid>` MDC コンポーネントに変換する。本プラグインが単独で
+     * 走る (= remark-zenn-mermaid を通さない) このテストでは、`<code
+     * class="language-mermaid">` が残存していても throw しない契約にする。
+     *
+     * 背景: `UNSUPPORTED_CODE_LANGUAGES` を空集合に戻したため、language 指定
+     * 起因の fail は発生しない。`@[mermaid]` inline directive の残留検知は
+     * 別に維持している (`unsupported span directives` ブロック参照)。
      */
-    it('throws when a mermaid code fence is present', () => {
+    it('does not throw when a mermaid code fence is present (handled by remarkZennMermaid upstream)', () => {
       const md = ['```mermaid', 'graph TD', '  A --> B', '```', ''].join('\n')
-      expect(() => processMarkdownToHast(md)).toThrowError(/mermaid/)
+      expect(() => processMarkdownToHast(md)).not.toThrow()
     })
 
     it('does not throw for supported languages (javascript/typescript/html)', () => {
@@ -252,6 +257,24 @@ describe('rehypeAssertNoZennLeftovers', () => {
       // `:::zenn-embed-card\n:::` は remark-mdc が `<zenn-embed-card>` element
       // として hast に出力するため、allowlist 判定の動作確認ができる。
       const md = [':::zenn-embed-card', ':::', ''].join('\n')
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMdc)
+        .use(remarkRehype, { allowDangerousHtml: false })
+        .use(rehypeAssertNoZennLeftovers)
+      expect(() => processor.runSync(processor.parse(md))).not.toThrow()
+    })
+  })
+
+  describe('zenn-mermaid is listed in KNOWN_MDC_RESULT_TAGS', () => {
+    /**
+     * Phase 3 Batch C1 で追加した `<zenn-mermaid>` タグが allowlist に
+     * 含まれていることを確認するための回帰テスト。`:::zenn-mermaid\n:::`
+     * を remark-mdc 経由で hast element に昇格させ、throw されないことを
+     * 検証する。
+     */
+    it('does not throw for a <zenn-mermaid> element', () => {
+      const md = [':::zenn-mermaid', ':::', ''].join('\n')
       const processor = unified()
         .use(remarkParse)
         .use(remarkMdc)
