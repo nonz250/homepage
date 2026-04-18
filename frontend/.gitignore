@@ -9,3 +9,7 @@ node_modules
 dist
 playwright-report
 test-results
+# OGP 画像は generate 時に動的生成されるため git 追跡対象外。
+# ディレクトリだけは deploy で配信先確保のため `.gitkeep` で維持する。
+public/ogp-images/*
+!public/ogp-images/.gitkeep

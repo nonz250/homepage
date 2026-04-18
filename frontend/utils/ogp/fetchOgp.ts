@@ -46,9 +46,16 @@ export interface OgpFailure {
 
 /**
  * OGP 抽出関数の型。HTML 文字列と base URL を受け取って `RawOgp` を返す。
- * 例外は throw。`fetchOgp` 内で catch して failure に丸める。
+ *
+ * `open-graph-scraper` のような実装は async (Promise<RawOgp>) を返すため
+ * union 型で受け付ける。`fetchOgp` 内部で `await` してから sanitize に渡す
+ * ため、sync / async どちらでも動作する。例外は throw。`fetchOgp` 内で
+ * catch して failure に丸める。
  */
-export type ExtractOgpFn = (html: string, baseUrl: string) => RawOgp
+export type ExtractOgpFn = (
+  html: string,
+  baseUrl: string,
+) => RawOgp | Promise<RawOgp>
 
 /**
  * 画像 DL → 自サーバ配信パス返却のオプション関数。未指定なら `imagePath: null`。
@@ -171,11 +178,12 @@ export async function fetchOgp(
     return buildFailure(deps.cache, url, `fetch_failed:${message}`, deps.now)
   }
 
-  // 5) HTML 解釈 + OGP 抽出。
+  // 5) HTML 解釈 + OGP 抽出。extractOgp は sync / async どちらも許容するため
+  // `await` で両対応する。
   const html = decodeBodyAsUtf8(response.body)
   let raw: RawOgp
   try {
-    raw = deps.extractOgp(html, response.finalUrl)
+    raw = await deps.extractOgp(html, response.finalUrl)
   }
   catch (err) {
     const message = err instanceof Error ? err.message : String(err)
