@@ -19,6 +19,7 @@
     "@nuxt/content": "^3.13.0",
     "@playwright/test": "^1.59.1",
     "@resvg/resvg-js": "^2.6.2",
+    "@twemoji/svg": "^15.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/sanitize-html": "^2.16.1",
     "@vitest/coverage-v8": "^4.1.4",
