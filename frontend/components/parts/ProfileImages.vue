@@ -7,8 +7,8 @@
 </template>
 
 <script setup lang="ts">
-import MyFace from '~/components/atoms/MyFace'
-import MiniImage from '~/components/atoms/MiniImage'
+import MyFace from '~/components/atoms/MyFace.vue'
+import MiniImage from '~/components/atoms/MiniImage.vue'
 
 const moving = ref<boolean>(false)
 const z250 = ref<{

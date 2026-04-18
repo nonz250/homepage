@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import Anchor from '~/components/atoms/Anchor'
+import Anchor from '~/components/atoms/Anchor.vue'
 withDefaults(defineProps<{
   imagePath: string,
   link: string,

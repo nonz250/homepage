@@ -220,11 +220,11 @@
 </template>
 
 <script setup lang="ts">
-import Anchor from "~/components/atoms/Anchor";
+import Anchor from "~/components/atoms/Anchor.vue";
 import ArticleCard from "~/components/parts/ArticleCard.vue";
-import ProfileImages from '~/components/parts/ProfileImages'
-import Service from '~/components/parts/Service'
-import Work from '~/components/parts/Work'
+import ProfileImages from '~/components/parts/ProfileImages.vue'
+import Service from '~/components/parts/Service.vue'
+import Work from '~/components/parts/Work.vue'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 import { useArticles } from "~/composables/useArticles";
 import { useContentPreview } from "~/composables/useContentPreview";
