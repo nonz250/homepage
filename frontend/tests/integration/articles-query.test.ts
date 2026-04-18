@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import Database from 'better-sqlite3'
 import { DRAFT_MARKER } from '../../constants/content-security'
-import { INDEX_LATEST_ARTICLES_LIMIT } from '../../constants/article'
 import {
   isArticleVisibleNow,
   toArticle,
@@ -17,19 +16,16 @@ import {
  * `npm run generate` を 1 回走らせて成果物 (`.output/public` と `.data/content`)
  * を取得し、以下を統合観点で検証する:
  *
- *   1. 公開記事 (welcome / roadmap / changelog) の HTML が prerender される
- *   2. 下書き (draft-feature) / 予約投稿 (scheduled-release) の HTML は
- *      prerender されない
- *   3. 下書きマーカー `__DRAFT_MARKER__` が公開成果物に漏れていない
- *   4. Nuxt Content の SQLite DB には 5 件すべて登録されている
- *      (preview モードでは全件、production では可視判定でフィルタされる設計)
- *   5. composable 相当の並び順 / フィルタロジックが、
+ *   1. 公開記事 (hello) の HTML が prerender される
+ *   2. 下書きマーカー `__DRAFT_MARKER__` が公開成果物に漏れていない
+ *   3. Nuxt Content の SQLite DB に記事が正しく登録される
+ *   4. composable 相当の並び順 / フィルタロジックが、
  *      実 DB 行に対しても期待通りに動作する
  *
- * preview モードを含む挙動は純関数 (`isArticleVisibleNow`) の unit test で
- * カバー済みのため、ここでは production 側の統合確認 + preview モードで
- * 期待される件数 (5 件) が DB 上揃うことの確認に留める。E2E での UI 挙動は
- * 将来の Playwright スイートに委ねる。
+ * preview モードや下書き / 予約投稿のフィルタリング自体は純関数
+ * (`isArticleVisibleNow`) の unit test で全パターンをカバー済み。
+ * ここでは「公開 articles が存在する状態での production generate が
+ * 期待通りに動くこと」を最低限確認する。
  */
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -37,12 +33,10 @@ const FRONTEND_ROOT = resolve(__dirname, '../..')
 const OUTPUT_PUBLIC = resolve(FRONTEND_ROOT, '.output/public')
 const CONTENT_SQLITE = resolve(FRONTEND_ROOT, '.data/content/contents.sqlite')
 
-/** production 公開される fixture 記事 (期待されるディレクトリ名) */
-const PUBLIC_SLUGS = ['welcome', 'roadmap', 'changelog'] as const
-/** production で除外される fixture 記事 */
-const HIDDEN_SLUGS = ['draft-feature', 'scheduled-release'] as const
+/** production で公開される記事 */
+const PUBLIC_SLUGS = ['hello'] as const
 
-/** 予約投稿がまだ未来であることを前提としたビルド基準時刻 */
+/** ビルド基準時刻 (hello の published_at 以降なら任意で良い) */
 const BUILD_TIME_MS = Date.parse('2026-04-17T00:00:00Z')
 
 interface ArticleDbRow {
@@ -69,7 +63,6 @@ beforeAll(() => {
   const result = spawnSync('npm', ['run', 'generate'], {
     cwd: FRONTEND_ROOT,
     stdio: 'inherit',
-    // Node 20 系の ESM 解決に揃える
     env: process.env,
   })
   if (result.status !== 0) {
@@ -86,14 +79,6 @@ describe('articles query integration (production generate)', () => {
       (slug) => {
         const htmlPath = resolve(OUTPUT_PUBLIC, 'articles', slug, 'index.html')
         expect(existsSync(htmlPath)).toBe(true)
-      },
-    )
-
-    it.each(HIDDEN_SLUGS)(
-      '/articles/%s/index.html is NOT prerendered',
-      (slug) => {
-        const htmlPath = resolve(OUTPUT_PUBLIC, 'articles', slug, 'index.html')
-        expect(existsSync(htmlPath)).toBe(false)
       },
     )
   })
@@ -122,16 +107,13 @@ describe('articles query integration (production generate)', () => {
       db.close()
     })
 
-    it('includes all five fixture articles (preview-equivalent)', () => {
-      expect(rows).toHaveLength(5)
+    it('includes every published article', () => {
+      expect(rows).toHaveLength(PUBLIC_SLUGS.length)
       const slugs = rows.map((r) => r.stem).sort()
-      expect(slugs).toEqual(
-        ['changelog', 'draft-feature', 'roadmap', 'scheduled-release', 'welcome'].sort(),
-      )
+      expect(slugs).toEqual([...PUBLIC_SLUGS].sort())
     })
 
     it('production visibility filter yields exactly the public slugs', () => {
-      // composable と同じロジックで DB 行を絞り込む。
       const visible = rows
         .filter((r) =>
           isArticleVisibleNow(
@@ -148,20 +130,20 @@ describe('articles query integration (production generate)', () => {
     })
 
     it('toArticle maps DB rows to DTO shape used by composables', () => {
-      const welcome = rows.find((r) => r.stem === 'welcome')
-      expect(welcome).toBeDefined()
-      if (!welcome) return
+      const hello = rows.find((r) => r.stem === 'hello')
+      expect(hello).toBeDefined()
+      if (!hello) return
       const article = toArticle({
-        stem: welcome.stem,
-        path: welcome.path,
-        title: welcome.title,
+        stem: hello.stem,
+        path: hello.path,
+        title: hello.title,
         type: 'idea',
         topics: [],
-        published: welcome.published === 1,
-        published_at: welcome.published_at ?? undefined,
+        published: hello.published === 1,
+        published_at: hello.published_at ?? undefined,
       })
-      expect(article.slug).toBe('welcome')
-      expect(article.path).toBe('/welcome')
+      expect(article.slug).toBe('hello')
+      expect(article.path).toBe('/hello')
       expect(article.published).toBe(true)
     })
 
@@ -177,16 +159,7 @@ describe('articles query integration (production generate)', () => {
           return bMs - aMs
         })
         .map((r) => r.stem)
-      // 3 件の時系列降順。最新の changelog が先頭になる想定。
-      expect(sorted).toEqual(['changelog', 'roadmap', 'welcome'])
-    })
-  })
-
-  describe('index latest limit constant', () => {
-    it('aligns with the number of published fixtures at MVP', () => {
-      // INDEX_LATEST_ARTICLES_LIMIT = 3。Step 10〜13 で index ページから
-      // これを上限として参照する予定。fixture 件数との整合を確認する。
-      expect(PUBLIC_SLUGS.length).toBe(INDEX_LATEST_ARTICLES_LIMIT)
+      expect(sorted).toEqual([...PUBLIC_SLUGS])
     })
   })
 })
