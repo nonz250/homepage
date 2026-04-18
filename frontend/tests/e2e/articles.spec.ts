@@ -14,11 +14,20 @@ import type { ConsoleMessage } from '@playwright/test'
  *   - console.error / console.warning が 0 件 (hydration warning を検知)
  */
 
-/** 公開記事の slug 一覧 */
-const PUBLIC_SLUGS = ['hello'] as const
+/**
+ * 公開記事の slug 一覧。
+ *
+ * - hello: articles/ (Zenn 共有) 側のサンプル
+ * - about-this-site: site-articles/ (本サイト限定) 側のサンプル
+ * 両ディレクトリが本サイトでは同一コレクションとして表示されることを検証する。
+ */
+const PUBLIC_SLUGS = ['hello', 'about-this-site'] as const
 
 /** 公開記事のタイトル期待値 (fixture frontmatter の title と一致) */
-const PUBLIC_ARTICLE_TITLES = ['Hello'] as const
+const PUBLIC_ARTICLE_TITLES = [
+  'ブログを移転しました',
+  'このサイトについて（本サイト限定）',
+] as const
 
 /** 404 を期待する（prerender されない）slug のサンプル */
 const MISSING_SLUGS = ['not-published', 'some-future-article'] as const
@@ -88,13 +97,31 @@ test.describe('articles detail page', () => {
     // なお、本文 Markdown の `# 見出し` は rehype-slug + ContentRenderer で
     // 追加の h1 として出るため、ArticleHeader 側は .title クラスで一意に絞る。
     const headerTitle = page.locator('h1.title')
-    await expect(headerTitle).toContainText('Hello')
+    await expect(headerTitle).toContainText('ブログを移転しました')
 
     // 本文 (記事詳細の main) に fixture の文言が含まれる。
     // Nuxt の default layout 側にも <main> があるため、詳細ページ側の
     // .article-detail クラスで限定する。
     const main = page.locator('main.article-detail')
-    await expect(main).toContainText('本サイトのブログをご覧いただきありがとうございます')
+    await expect(main).toContainText('今後はこちらで新しい記事を更新していきます')
+
+    expect(issues, 'no console errors or hydration warnings').toEqual([])
+  })
+
+  test('/articles/about-this-site renders site-only post', async ({ page }) => {
+    const issues = collectConsoleIssues(page)
+    const response = await page.goto('/articles/about-this-site')
+    expect(response).not.toBeNull()
+    expect(response!.status()).toBe(200)
+
+    // site-articles/ 側の記事でも articles/ と同じく ArticleHeader + main が
+    // 描画されること、Zenn 共有記事とルーティング / レイアウトの差が出ない
+    // ことを確認する。
+    const headerTitle = page.locator('h1.title')
+    await expect(headerTitle).toContainText('このサイトについて（本サイト限定）')
+
+    const main = page.locator('main.article-detail')
+    await expect(main).toContainText('Zenn には公開されません')
 
     expect(issues, 'no console errors or hydration warnings').toEqual([])
   })

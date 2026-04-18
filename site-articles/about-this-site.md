@@ -6,7 +6,7 @@ topics:
   - site
   - local
 published: true
-published_at: '2026-04-18T00:00:00+09:00'
+published_at: '2026-04-18T01:00:00+09:00'
 ---
 
 この記事は本サイト（[nozomi.bike](https://nozomi.bike)）限定で公開しています。Zenn Connect の対象外ディレクトリ `site-articles/` に配置しているため、Zenn には公開されません。
