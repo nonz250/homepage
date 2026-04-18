@@ -128,9 +128,6 @@ function isParagraph(node: RootContent): node is Paragraph {
 
 /**
  * paragraph の直下に text ノードが 1 つだけある構造かを判定する。
- *
- * Zenn の開始行/閉じ行だけの paragraph はこの構造になる (インライン記法を
- * 含まないため)。中間段落は複数の children を持ちうるので、それは別判定。
  */
 function isSingleTextParagraph(
   paragraph: Paragraph,
@@ -142,59 +139,116 @@ function isSingleTextParagraph(
 }
 
 /**
- * 開始 paragraph (1つめの text 行) を解析し、Zenn コンテナ情報を抽出する。
+ * paragraph の先頭 child が text で、その value が Zenn 開始行で始まっている
+ * か判定する。インラインコードやリンクを含む段落でも、先頭 text の冒頭
+ * `:::name [args]\n` だけを拾うため本関数を使う。
+ */
+function isOpenerParagraph(paragraph: Paragraph): boolean {
+  const first = paragraph.children[0]
+  if (!first || first.type !== 'text') {
+    return false
+  }
+  return ZENN_OPENER_FIRST_LINE_PATTERN.test(first.value)
+}
+
+/**
+ * 開始 paragraph を解析した結果。
  *
- * 戻り値:
  *   - name: `message` or `details`
  *   - attributes: MDC に渡す属性
- *   - leadingText: paragraph の残り (開始行を除いた本文)。空なら null
- *   - closesInSameParagraph: 開始 paragraph 内で `\n:::` で既に閉じている
+ *   - headParagraph: 開始行を除いた残りを含む paragraph。空なら null
+ *   - closesInSameParagraph: 開始 paragraph 内で閉じ行 `:::` が見つかった
  */
 interface OpenerInfo {
   readonly name: 'message' | 'details'
   readonly attributes: Record<string, string>
-  readonly leadingText: string | null
+  readonly headParagraph: Paragraph | null
   readonly closesInSameParagraph: boolean
 }
 
 /**
  * 開始 paragraph を解析し、そこから OpenerInfo を構築する。
- * 対象外 (Zenn 開始行でない) なら null を返す。
+ *
+ * 開始 paragraph は「最初の text child の value が `:::<name> <args>\n` で
+ * 始まる」構造を持つ。残りの children (インラインコード、リンク、後続 text
+ * 等) は全て body 側に移設する。
  */
 function parseOpener(paragraph: Paragraph): OpenerInfo | null {
-  if (!isSingleTextParagraph(paragraph)) {
-    // 単一 text でない = 開始行の直後にリンクや強調等のインライン記法が続く
-    // ケース。Zenn の開始行は `:::<name> <args>\n` で改行を含むため、
-    // 通常はこのケースには入らない。本プラグインでは single-text のみ対応。
+  if (!isOpenerParagraph(paragraph)) {
     return null
   }
-  const text = paragraph.children[0].value
-  const match = text.match(ZENN_OPENER_FIRST_LINE_PATTERN)
+  const firstText = paragraph.children[0] as Text
+  const match = firstText.value.match(ZENN_OPENER_FIRST_LINE_PATTERN)
   if (match === null) {
     return null
   }
   const rawName = match[1]
-  const rawArg = (match[2] ?? '').trim()
   if (
     rawName !== ZENN_SOURCE_CONTAINER_NAMES.message &&
     rawName !== ZENN_SOURCE_CONTAINER_NAMES.details
   ) {
     return null
   }
+  const rawArg = (match[2] ?? '').trim()
   const name = rawName
   const attributes =
     name === ZENN_SOURCE_CONTAINER_NAMES.message
       ? buildMessageAttributes(rawArg)
       : buildDetailsAttributes(rawArg)
-  const headerLength = match[0].length
-  const remainder = text.slice(headerLength)
-  const closesInSameParagraph = ZENN_CLOSER_PATTERN.test(remainder)
-  const stripped = closesInSameParagraph
-    ? remainder.replace(ZENN_CLOSER_PATTERN, '')
-    : remainder
-  const trimmed = stripped.replace(/^\n/, '').replace(/\n$/, '')
-  const leadingText = trimmed.length > 0 ? trimmed : null
-  return { name, attributes, leadingText, closesInSameParagraph }
+  const strippedFirstText = firstText.value.slice(match[0].length)
+  const headChildren = [
+    ...(strippedFirstText.length > 0
+      ? [{ type: 'text' as const, value: strippedFirstText }]
+      : []),
+    ...paragraph.children.slice(1),
+  ]
+  const closesInSameParagraph = paragraphClosesWithCloser(headChildren)
+  const normalizedHead = closesInSameParagraph
+    ? stripTrailingCloserFromChildren(headChildren)
+    : headChildren
+  const headParagraph = normalizedHead.length > 0
+    ? ({ type: 'paragraph' as const, children: normalizedHead })
+    : null
+  return { name, attributes, headParagraph, closesInSameParagraph }
+}
+
+/**
+ * paragraph の children 配列の末尾を検査し、最後の text が `\n:::` で終わって
+ * いるか判定する。
+ */
+function paragraphClosesWithCloser(
+  children: readonly Paragraph['children'][number][],
+): boolean {
+  const last = children[children.length - 1]
+  if (!last || last.type !== 'text') {
+    return false
+  }
+  return ZENN_CLOSER_PATTERN.test(last.value)
+}
+
+/**
+ * children 末尾の text value から `\n:::` (末尾の閉じ行) を剥がした新しい
+ * 配列を返す。剥がした結果の text が空なら最後の child 自体を配列から除去
+ * する。
+ */
+function stripTrailingCloserFromChildren(
+  children: readonly Paragraph['children'][number][],
+): Paragraph['children'][number][] {
+  if (children.length === 0) {
+    return []
+  }
+  const last = children[children.length - 1]
+  if (!last || last.type !== 'text') {
+    return [...children]
+  }
+  const stripped = last.value
+    .replace(ZENN_CLOSER_PATTERN, '')
+    .replace(/\n$/, '')
+  const head = children.slice(0, -1)
+  if (stripped.length === 0) {
+    return head
+  }
+  return [...head, { type: 'text' as const, value: stripped }]
 }
 
 /**
@@ -230,32 +284,16 @@ function isCloserParagraph(paragraph: Paragraph): boolean {
 }
 
 /**
- * paragraph の末尾 `:::` を剥がした新しい text value を返す。
- * `:::` が末尾に無い場合は元の value をそのまま返す。
+ * paragraph の末尾 `:::` 行を剥がした新しい paragraph を返す。
+ *
+ * 末尾が text の場合のみ処理する。末尾が別種 (inline code 等) の場合は
+ * 変化なし。
  */
-function stripCloser(paragraph: Paragraph): Paragraph {
-  if (!isSingleTextParagraph(paragraph)) {
-    return paragraph
-  }
-  const value = paragraph.children[0].value
-  const newValue = value.replace(ZENN_CLOSER_PATTERN, '').replace(/\n$/, '')
+function stripTrailingCloserFromParagraph(paragraph: Paragraph): Paragraph {
+  const stripped = stripTrailingCloserFromChildren(paragraph.children)
   return {
     type: 'paragraph',
-    children: [{ type: 'text', value: newValue }],
-  }
-}
-
-/**
- * 開始 paragraph の leadingText (= 開始行を除いた本文) から新しい paragraph を
- * 作る。leadingText が空なら null を返し、呼び出し側で push をスキップする。
- */
-function buildLeadingParagraph(leadingText: string | null): Paragraph | null {
-  if (leadingText === null) {
-    return null
-  }
-  return {
-    type: 'paragraph',
-    children: [{ type: 'text', value: leadingText }],
+    children: stripped,
   }
 }
 
@@ -357,13 +395,12 @@ function rewriteArgumentedContainers(parent: Parent): void {
       const opener = parseOpener(current as Paragraph)
       if (opener !== null) {
         const contentChildren: RootContent[] = []
-        const leading = buildLeadingParagraph(opener.leadingText)
-        if (leading !== null) {
-          contentChildren.push(leading)
+        if (opener.headParagraph !== null) {
+          contentChildren.push(opener.headParagraph)
         }
         if (opener.closesInSameParagraph) {
           // 単一 paragraph に `:::xxx\nbody\n:::` が詰め込まれているケース。
-          // body は leading として既に push 済み。
+          // body は headParagraph として既に push 済み。
           rewritten.push(makeContainerComponent(opener, contentChildren))
           index += 1
           continue
@@ -378,13 +415,10 @@ function rewriteArgumentedContainers(parent: Parent): void {
               closeIndex = j
               break
             }
-            // 閉じ paragraph ではないが、最終 text が `\n:::` で終わっていれば
+            // 閉じ paragraph ではないが、末尾 text が `\n:::` で終わっていれば
             // そこが close 行を兼ねる。
-            if (
-              isSingleTextParagraph(paragraph) &&
-              ZENN_CLOSER_PATTERN.test(paragraph.children[0].value)
-            ) {
-              contentChildren.push(stripCloser(paragraph))
+            if (paragraphClosesWithCloser(paragraph.children)) {
+              contentChildren.push(stripTrailingCloserFromParagraph(paragraph))
               closeIndex = j
               break
             }

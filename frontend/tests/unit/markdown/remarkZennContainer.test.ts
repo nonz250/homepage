@@ -175,6 +175,51 @@ describe('remarkZennContainer', () => {
     })
   })
 
+  describe('openers mixed with inline markup', () => {
+    it('lifts `:::message alert` even when body contains inline code', () => {
+      // `:::message alert\nDanger: see ` + `$x$` (inline code) + `.\n:::`
+      // のように、開始行と同じ段落にインライン code が続くケース。
+      // remark-parse は paragraph を分割せず 1 つにまとめるため、parseOpener
+      // は「最初の text child の冒頭に Zenn 記法がある」判定で昇格させる
+      // 必要がある。
+      const input = [
+        ':::message alert',
+        'Danger: see `$x$`.',
+        ':::',
+        '',
+      ].join('\n')
+      const tree = runPipeline(input)
+      const containers = findContainers(tree)
+      expect(containers).toHaveLength(1)
+      expect(containers[0].attributes).toMatchObject({ type: 'alert' })
+    })
+
+    it('preserves inline code inside the container body', () => {
+      const input = [
+        ':::message alert',
+        'see `foo()` now',
+        ':::',
+        '',
+      ].join('\n')
+      const tree = runPipeline(input)
+      const containers = findContainers(tree)
+      expect(containers).toHaveLength(1)
+      // コンテナ children のどこかに inlineCode ノードが残っていること
+      const flatten = (node: unknown): string => {
+        const n = node as { type?: string; value?: string; children?: unknown[] }
+        if (n.type === 'inlineCode') {
+          return String(n.value ?? '')
+        }
+        if (Array.isArray(n.children)) {
+          return n.children.map(flatten).join('')
+        }
+        return ''
+      }
+      const innerCode = flatten(containers[0])
+      expect(innerCode).toContain('foo()')
+    })
+  })
+
   describe('code blocks are not touched', () => {
     it('does not lift `:::message` inside a fenced code block', () => {
       const input = [
