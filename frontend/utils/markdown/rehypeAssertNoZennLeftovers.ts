@@ -38,6 +38,41 @@ const SUPPORTED_CONTAINER_NAMES: readonly string[] = Object.freeze([
 ])
 
 /**
+ * remark-mdc が昇格させた hast `<tag>` のうち、ビルドを通す「既知」タグ名の
+ * 集合。
+ *
+ * Zenn MDC コンポーネント (`zenn-*`) と、`details` のような HTML5 標準タグで
+ * Zenn コンテナ由来になり得る要素名を列挙する。この集合に含まれない
+ * カスタム風タグ (`<warning>`, `<info>`, `<tip>` 等) は、remark-mdc が
+ * 昇格させた未対応 Zenn コンテナ名である可能性が高く、静かな記事壊れを
+ * 防ぐため fail させる。
+ */
+const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
+  // Zenn 専用 MDC コンポーネント (remark-zenn-container / remark-zenn-embed が
+  // 生成する kebab-case タグ名)。
+  'zenn-message',
+  'zenn-details',
+  'zenn-embed-you-tube',
+  'zenn-embed-code-pen',
+  'zenn-embed-code-sandbox',
+  'zenn-embed-stack-blitz',
+])
+
+/**
+ * 未対応と明示的に扱う hast `<tag>` 名の集合。
+ *
+ * `@nuxtjs/mdc` が remark-mdc から昇格させる未対応コンテナ名のうち、Zenn
+ * 互換で想定される記法 (`:::warning`, `:::tip`, `:::info`) をここで列挙する。
+ * blocklist と allowlist (`KNOWN_MDC_RESULT_TAGS`) の両方を持つのは、
+ * HTML5 タグ (`<section>` 等) を誤検知しないための安全装置。
+ */
+const UNSUPPORTED_MDC_TAGS: ReadonlySet<string> = new Set([
+  'warning',
+  'tip',
+  'info',
+])
+
+/**
  * `@[name]` 形式のうち、text node にそのまま残留する珍しいケース (コード等で
  * エスケープされていない場合) を拾う正規表現。
  *
@@ -83,7 +118,7 @@ export const UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX =
  * 検知された違反箇所を表す内部型。
  */
 interface Leftover {
-  readonly kind: 'embed' | 'container'
+  readonly kind: 'embed' | 'container' | 'element'
   readonly raw: string
   readonly name: string
 }
@@ -137,6 +172,7 @@ function walk(
     const parentNode = node as Root | Element
     if (parentNode.type === 'element') {
       collectAnchorLeftovers(parentNode as Element, leftovers)
+      collectUnknownElementLeftovers(parentNode as Element, leftovers)
     }
     const nextAncestors =
       parentNode.type === 'element'
@@ -145,6 +181,27 @@ function walk(
     for (const child of iterateChildren(parentNode)) {
       walk(child, nextAncestors, leftovers)
     }
+  }
+}
+
+/**
+ * element の tagName が `UNSUPPORTED_MDC_TAGS` blocklist に含まれる場合、
+ * 未対応コンテナとして検知する。
+ *
+ * `KNOWN_MDC_RESULT_TAGS` allowlist と `UNSUPPORTED_MDC_TAGS` blocklist を
+ * 組み合わせ、HTML5 標準タグ (`<section>` 等) の誤検知を避けつつ、Zenn
+ * 由来の未対応コンテナ名 (`:::warning`, `:::tip` 等) を確実に拾う。
+ */
+function collectUnknownElementLeftovers(
+  element: Element,
+  leftovers: Leftover[],
+): void {
+  const tag = element.tagName
+  if (KNOWN_MDC_RESULT_TAGS.has(tag)) {
+    return
+  }
+  if (UNSUPPORTED_MDC_TAGS.has(tag)) {
+    leftovers.push({ kind: 'element', raw: `<${tag}>`, name: tag })
   }
 }
 
@@ -289,8 +346,22 @@ function collectContainerLeftovers(
  */
 function buildErrorMessage(leftovers: readonly Leftover[]): string {
   const lines = leftovers.map((leftover) => {
-    const label = leftover.kind === 'embed' ? 'embed' : 'container'
+    const label = leftoverKindLabel(leftover.kind)
     return `  - ${label} \`${leftover.raw}\` (name="${leftover.name}")`
   })
   return `${UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX}\n${lines.join('\n')}`
+}
+
+/**
+ * Leftover.kind を人間可読なラベルに変換する。
+ */
+function leftoverKindLabel(kind: Leftover['kind']): string {
+  switch (kind) {
+    case 'embed':
+      return 'embed'
+    case 'container':
+      return 'container'
+    case 'element':
+      return 'element'
+  }
 }

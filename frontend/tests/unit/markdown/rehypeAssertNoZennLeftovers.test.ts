@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
+import remarkMdc from 'remark-mdc'
 import rehypeAssertNoZennLeftovers, {
   UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX,
 } from '../../../utils/markdown/rehypeAssertNoZennLeftovers'
@@ -130,6 +131,53 @@ describe('rehypeAssertNoZennLeftovers', () => {
       const attempt = () => processMarkdownToHast(md)
       expect(attempt).toThrowError(/@\[card\]/)
       expect(attempt).toThrowError(/warning/)
+    })
+  })
+
+  describe('unsupported container tags lifted by remark-mdc', () => {
+    /**
+     * remark-mdc は引数なしの `:::<name>` を `containerComponent` に昇格させ、
+     * remark-rehype で `<name>` タグの hast element になる。その段階で
+     * `<warning>` / `<tip>` / `<info>` のような未対応 Zenn コンテナ名が
+     * 残っていたら本プラグインが検知して fail させる責務を担う。
+     */
+    function processWithMdcToHast(md: string): void {
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMdc)
+        .use(remarkRehype, { allowDangerousHtml: false })
+        .use(rehypeAssertNoZennLeftovers)
+      processor.runSync(processor.parse(md))
+    }
+
+    it('throws when :::warning container is lifted into <warning> element', () => {
+      const md = [':::warning', 'body', ':::', ''].join('\n')
+      expect(() => processWithMdcToHast(md)).toThrowError(
+        UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX,
+      )
+    })
+
+    it('throws when :::tip container is lifted into <tip> element', () => {
+      const md = [':::tip', 'hint', ':::', ''].join('\n')
+      expect(() => processWithMdcToHast(md)).toThrowError(/tip/)
+    })
+
+    it('throws when :::info container is lifted into <info> element', () => {
+      const md = [':::info', 'note', ':::', ''].join('\n')
+      expect(() => processWithMdcToHast(md)).toThrowError(/info/)
+    })
+
+    it('does not throw when :::message is lifted (message is a supported container name)', () => {
+      // remark-mdc による `<message>` 昇格は本プラグイン単独では blocklist に
+      // 含めていない。実運用では remark-zenn-container が先に
+      // `zenn-message` にリネームしてから本プラグインが走るため、生の
+      // `<message>` は allowlist 外。ただし message 自体は Zenn 対応記法なので、
+      // この段階での fail は避ける (後続の remark-zenn-container が変換する
+      // はずの契約)。
+      const md = [':::message', 'hello', ':::', ''].join('\n')
+      expect(() => processWithMdcToHast(md)).not.toThrowError(
+        UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX,
+      )
     })
   })
 })
