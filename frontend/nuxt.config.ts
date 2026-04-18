@@ -1,13 +1,19 @@
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, join } from 'node:path'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
+import { buildTagsIndex } from './utils/prerender/buildTagsIndex'
 import { collectSlugEntriesFromDirs } from './utils/prerender/collectSlugEntriesFromDirs'
 import {
   detectSlugCollisions,
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
+import {
+  ARTICLES_TAG_ROUTE_PREFIX,
+  TAGS_INDEX_FILE_NAME,
+} from './constants/tags'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -230,15 +236,52 @@ export default defineNuxtConfig({
           ? false
           : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
       const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
-      const routes = buildPrerenderRoutes(articles, getBuildTime(), {
+      const buildTime = getBuildTime()
+      const routes = buildPrerenderRoutes(articles, buildTime, {
         preview,
         nodeEnv,
       })
+      // タグ index をビルド時点で確定し、prerender 対象のタグページ URL と
+      // `.output/public/tags.json` の書き出し内容の両方を同じデータから
+      // 生成する (両者がズレるとタグページ 404 の原因になる)。
+      const tagsIndex = buildTagsIndex(articles, buildTime, {
+        preview,
+        nodeEnv,
+      })
+      const tagRoutes = Object.keys(tagsIndex).map(
+        (tag) => `${ARTICLES_TAG_ROUTE_PREFIX}${tag}`,
+      )
       nitroConfig.prerender = nitroConfig.prerender ?? {}
       nitroConfig.prerender.routes = [
         ...(nitroConfig.prerender.routes ?? []),
         ...routes,
+        ...tagRoutes,
       ]
+    },
+    // `.output/public/tags.json` を書き出す。`nitro:build:public-assets` は
+    // `copyPublicAssets` 直後 (prerender 開始前) に呼ばれるため、ここで書き
+    // 出すと prerender 時に tags.json が既に存在する状態になる。
+    //
+    // dev では呼ばれない hook なので、dev 時 `useTagIndex` が 404 を返しても
+    // fail-safe に空マップとして振る舞うよう composable 側で担保する。
+    'nitro:build:public-assets'(nitro) {
+      const nodeEnv = process.env.NODE_ENV
+      const preview =
+        nodeEnv === 'production'
+          ? false
+          : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
+      const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
+      const tagsIndex = buildTagsIndex(articles, getBuildTime(), {
+        preview,
+        nodeEnv,
+      })
+      const publicDir = nitro.options.output.publicDir
+      mkdirSync(publicDir, { recursive: true })
+      writeFileSync(
+        join(publicDir, TAGS_INDEX_FILE_NAME),
+        JSON.stringify(tagsIndex),
+        'utf8',
+      )
     },
   },
 

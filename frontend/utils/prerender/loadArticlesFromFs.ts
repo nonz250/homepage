@@ -1,7 +1,7 @@
 /**
  * ビルド時に記事ソースディレクトリ配下から Markdown ファイルを列挙し、
  * frontmatter をパースして prerender 判定用のメタ情報
- * (slug/published/published_at) を得るユーティリティ。
+ * (slug/published/published_at/topics) を得るユーティリティ。
  *
  * Nuxt Content v3 の `queryCollection` はサーバーランタイム側 API であり、
  * Nuxt の build hook (nitro:config / prerender:routes) からは直接呼べない。
@@ -12,35 +12,54 @@
  * これは `articles/` (Zenn 共有) と `site-articles/` (本サイト限定) を同一
  * コレクションとして扱うための拡張 (ADR `site-only-articles.md` 参照)。
  *
- * 副作用: ファイルシステム読み込みあり。純関数である buildPrerenderRoutes と
- * 明確に分離し、I/O とビジネスロジックの責務を切り分ける。
+ * 戻り値は `Article` (prerender 用) と `TagIndexArticle` (タグ index 用)
+ * の共通 superset を返す。両者とも構造的部分型として受け取れる。
+ *
+ * 副作用: ファイルシステム読み込みあり。純関数である buildPrerenderRoutes /
+ * buildTagsIndex と明確に分離し、I/O とビジネスロジックの責務を切り分ける。
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, parse as parsePath } from 'node:path'
 import matter from 'gray-matter'
 import type { Article } from './buildPrerenderRoutes'
+import type { TagIndexArticle } from './buildTagsIndex'
 
 /** 記事として扱う拡張子 (Zenn Connect 互換) */
 const MARKDOWN_EXTENSION = '.md'
 
 /**
+ * `loadArticlesFromFs` の戻り値型。
+ *
+ * `Article` (prerender 判定) と `TagIndexArticle` (タグ index 構築) の
+ * 共通 superset。呼び出し側は構造的部分型として扱える。
+ */
+export interface LoadedArticle extends Article, TagIndexArticle {
+  readonly slug: string
+  readonly published: boolean
+  readonly published_at?: string
+  readonly topics: readonly string[]
+}
+
+/**
  * 指定した 1 つ以上のディレクトリ配下の Markdown から Article 配列を構築する。
  *
  * - slug はファイル名 (拡張子除く) を採用 (Zenn の慣習と同じ)
- * - published / published_at は frontmatter の値を読む。不正な型の場合は
- *   それぞれ安全な既定値 (published=false, published_at=undefined) に倒す
+ * - published / published_at / topics は frontmatter の値を読む。不正な型の
+ *   場合は安全な既定値 (published=false, published_at=undefined, topics=[])
+ *   に倒す
+ * - topics は配列内の string 要素のみ採用。non-string 要素は黙って除外
  * - frontmatter パース失敗や read error は呼び出し側 (build) で検知する
  *   ため、ここでは例外をそのまま伝播させる
  * - 存在しないディレクトリはスキップ (他のディレクトリがあれば処理を継続)
  *
  * @param articlesDirs 記事ディレクトリの絶対パス。単一文字列でも配列でも可
- * @returns Article 配列 (順序はディレクトリ列挙順 + 各ディレクトリ内の OS 列挙順)
+ * @returns LoadedArticle 配列 (順序はディレクトリ列挙順 + 各ディレクトリ内の OS 列挙順)
  */
 export function loadArticlesFromFs(
   articlesDirs: string | readonly string[],
-): Article[] {
+): LoadedArticle[] {
   const dirs = typeof articlesDirs === 'string' ? [articlesDirs] : articlesDirs
-  const articles: Article[] = []
+  const articles: LoadedArticle[] = []
   for (const dir of dirs) {
     if (!directoryExists(dir)) continue
     const entries = readdirSync(dir, { withFileTypes: true })
@@ -56,10 +75,27 @@ export function loadArticlesFromFs(
         published: data.published === true,
         published_at:
           typeof data.published_at === 'string' ? data.published_at : undefined,
+        topics: coerceTopics(data.topics),
       })
     }
   }
   return articles
+}
+
+/**
+ * frontmatter の `topics` フィールドを安全な `string[]` に正規化する。
+ *
+ * - 配列でなければ空配列
+ * - 配列内は string 要素のみ採用 (non-string は除外)
+ * - schema 側 (`content/schema/article.ts`) で pattern 検証は行われるが、
+ *   FS から直接読む本関数は schema を通さないため、ここでも型の正規化だけは
+ *   行う (fail-open ではなく、不正値は静かに落とす fail-safe)
+ */
+function coerceTopics(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((v): v is string => typeof v === 'string')
 }
 
 /** ディレクトリが存在するか確認する (存在しない環境でも build を止めない) */

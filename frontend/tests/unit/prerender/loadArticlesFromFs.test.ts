@@ -50,6 +50,9 @@ describe('loadArticlesFromFs', () => {
         'title: hello',
         'published: true',
         "published_at: '2026-04-18T00:00:00+09:00'",
+        'topics:',
+        '  - blog',
+        '  - announcement',
         '---',
         '',
         'body',
@@ -62,6 +65,7 @@ describe('loadArticlesFromFs', () => {
         slug: 'hello',
         published: true,
         published_at: '2026-04-18T00:00:00+09:00',
+        topics: ['blog', 'announcement'],
       },
     ])
   })
@@ -119,8 +123,42 @@ describe('loadArticlesFromFs', () => {
         slug: 'weird',
         published: false,
         published_at: undefined,
+        topics: [],
       },
     ])
+  })
+
+  it('normalizes non-array and non-string topics to safe defaults', () => {
+    const dir = join(tmpRoot, 'articles')
+    mkdirSync(dir)
+    writeArticle(
+      dir,
+      'not-array-topics.md',
+      ['---', 'title: weird', 'published: true', 'topics: notarray', '---'].join(
+        '\n',
+      ),
+    )
+    writeArticle(
+      dir,
+      'mixed-topics.md',
+      [
+        '---',
+        'title: mixed',
+        'published: true',
+        'topics:',
+        '  - good',
+        '  - 42',
+        '  - ok',
+        '---',
+      ].join('\n'),
+    )
+
+    const result = loadArticlesFromFs(dir)
+    const byName = Object.fromEntries(
+      result.map((r) => [r.slug, r.topics] as const),
+    )
+    expect(byName['not-array-topics']).toEqual([])
+    expect(byName['mixed-topics']).toEqual(['good', 'ok'])
   })
 
   it('ignores non-markdown files', () => {
