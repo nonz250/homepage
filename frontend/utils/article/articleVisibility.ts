@@ -12,6 +12,10 @@ import type { ArticleFrontmatter } from '../../content/schema/article'
  *
  * Nuxt Content v3 の PageCollectionItem から UI が必要とする情報だけを
  * 取り出した DTO。`slug` は Zenn 互換でファイル名相当の値を持つ。
+ *
+ * `ArticleFrontmatter` は `content/schema/article.ts` の zod schema から
+ * 派生した single source of truth であり、frontmatter 側を更新すれば
+ * UI 層の型も追従する設計となっている。
  */
 export interface Article extends ArticleFrontmatter {
   /** 記事の URL パス部分 (例: "welcome") */
@@ -25,6 +29,34 @@ interface VisibilityInput {
   published?: boolean
   published_at?: string
 }
+
+/**
+ * `toArticle` が受け入れる入力型。
+ *
+ * Nuxt Content v3 が返す `ArticlesCollectionItem` には index signature が
+ * ないため、`Record<string, unknown>` 直受けでは TS2345 になる。かつ、
+ * テストコードでは frontmatter フィールドを optional で渡したいため、
+ * 既知フィールドだけを optional で受け付ける専用型を定義する。
+ * 値の妥当性チェックはランタイムで行い、不正値は DTO のデフォルト値で
+ * 吸収する (fail-open ではなく、未定義フィールドを安全なデフォルトに
+ * 落とす形)。
+ */
+export interface ToArticleInput {
+  readonly stem?: string
+  readonly path?: string
+  readonly title?: unknown
+  readonly type?: unknown
+  readonly topics?: unknown
+  readonly published?: unknown
+  readonly published_at?: unknown
+  readonly emoji?: unknown
+}
+
+/** `type` frontmatter のデフォルト値 */
+const DEFAULT_ARTICLE_TYPE: Article['type'] = 'tech'
+
+/** `type` frontmatter の受理可能値 */
+const ARTICLE_TYPE_VALUES: ReadonlyArray<Article['type']> = ['tech', 'idea']
 
 /**
  * 現在時刻 (ミリ秒) における記事の公開可視性を判定する。
@@ -52,22 +84,42 @@ export function isArticleVisibleNow(
 }
 
 /**
+ * 未知の値を Article['type'] に正規化する。
+ *
+ * zod schema で `'tech' | 'idea'` に絞っているが、DB 側から取得する経路では
+ * 型の保証がないためランタイム側でも narrow する。不明値は `tech` に倒す。
+ */
+function coerceArticleType(value: unknown): Article['type'] {
+  return ARTICLE_TYPE_VALUES.includes(value as Article['type'])
+    ? (value as Article['type'])
+    : DEFAULT_ARTICLE_TYPE
+}
+
+/**
+ * topics フィールドを安全に string[] に正規化する。
+ */
+function coerceTopics(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((v): v is string => typeof v === 'string')
+}
+
+/**
  * Nuxt Content のレコードから UI 向け Article DTO に変換する純関数。
  *
  * `stem` を slug として採用し (Zenn 互換)、UI が扱いやすい形に正規化する。
  * 未知のフィールドは切り落とし、API 境界を安定化させる目的。
  */
-export function toArticle(
-  item: Record<string, unknown> & { stem?: string; path?: string },
-): Article {
+export function toArticle(item: ToArticleInput): Article {
   const stem = typeof item.stem === 'string' ? item.stem : ''
   const path = typeof item.path === 'string' ? item.path : `/${stem}`
   return {
     slug: stem,
     path,
-    title: String(item.title ?? ''),
-    type: (item.type as Article['type']) ?? 'tech',
-    topics: Array.isArray(item.topics) ? (item.topics as string[]) : [],
+    title: typeof item.title === 'string' ? item.title : String(item.title ?? ''),
+    type: coerceArticleType(item.type),
+    topics: coerceTopics(item.topics),
     published: item.published === true,
     published_at:
       typeof item.published_at === 'string' ? item.published_at : undefined,
