@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 /**
- * articles/*.md の frontmatter を走査し、下書き (published !== true)
- * の slug を改行区切りで標準出力に書き出すヘルパー。
+ * 記事ソースディレクトリ (articles/ および site-articles/) の frontmatter を
+ * 走査し、下書き (published !== true) の slug を改行区切りで標準出力に
+ * 書き出すヘルパー。
  *
  * ビルド成果物スキャン (scripts/assert-no-drafts.sh) からシェル呼び出しで
  * 利用するため、依存は Node 標準と gray-matter のみに限定している。
  * side effects は「ファイル読み込み」と「標準出力への write」の 2 つのみ。
  *
  * 呼び出し方:
- *   node frontend/scripts/extract-draft-slugs.mjs [articles-dir]
- *     articles-dir のデフォルトはリポジトリ root 直下の `articles/`。
+ *   node frontend/scripts/extract-draft-slugs.mjs [...dirs]
+ *     dirs のデフォルトはリポジトリ root 直下の articles/ と site-articles/。
+ *     1 つ以上のディレクトリを任意で渡すことができる (複数指定可)。
  *
  * 終了コード:
  *   0: 成功 (0 件ヒットでも 0)
@@ -29,23 +31,27 @@ const EXIT_OK = 0
 const EXIT_FAIL = 1
 
 /**
- * articles ディレクトリ配下の Markdown から、published !== true な slug 群を
- * 純粋に抽出する関数。I/O はここに閉じ込める。
+ * 与えられたディレクトリ集合配下の Markdown から、published !== true な
+ * slug 群を純粋に抽出する関数。I/O はここに閉じ込める。
+ *
+ * - 存在しないディレクトリはスキップ (ビルドを止めない)
+ * - slug 重複の除去は行わない (衝突検知は collectSlugEntriesFromDirs /
+ *   detectSlugCollisions 側が build 時に fail させる役目を持つ)
  */
-function listDraftSlugs(articlesDir) {
-  if (!directoryExists(articlesDir)) {
-    return []
-  }
-  const entries = readdirSync(articlesDir, { withFileTypes: true })
+function listDraftSlugs(articlesDirs) {
   const drafts = []
-  for (const entry of entries) {
-    if (!entry.isFile()) continue
-    if (!entry.name.endsWith(MARKDOWN_EXTENSION)) continue
-    const absPath = join(articlesDir, entry.name)
-    const raw = readFileSync(absPath, 'utf8')
-    const { data } = matter(raw)
-    if (data.published !== true) {
-      drafts.push(parsePath(entry.name).name)
+  for (const dir of articlesDirs) {
+    if (!directoryExists(dir)) continue
+    const entries = readdirSync(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isFile()) continue
+      if (!entry.name.endsWith(MARKDOWN_EXTENSION)) continue
+      const absPath = join(dir, entry.name)
+      const raw = readFileSync(absPath, 'utf8')
+      const { data } = matter(raw)
+      if (data.published !== true) {
+        drafts.push(parsePath(entry.name).name)
+      }
     }
   }
   return drafts
@@ -59,19 +65,21 @@ function directoryExists(path) {
   }
 }
 
-function resolveDefaultArticlesDir() {
+function resolveDefaultArticlesDirs() {
   const here = dirname(fileURLToPath(import.meta.url))
-  // frontend/scripts -> repo root /articles
-  return resolve(here, '../../articles')
+  // frontend/scripts -> repo root /articles, /site-articles
+  const repoRoot = resolve(here, '../..')
+  return [resolve(repoRoot, 'articles'), resolve(repoRoot, 'site-articles')]
 }
 
 function main() {
-  const argPath = process.argv[2]
-  const articlesDir = argPath
-    ? resolve(process.cwd(), argPath)
-    : resolveDefaultArticlesDir()
+  const argPaths = process.argv.slice(2)
+  const articlesDirs =
+    argPaths.length > 0
+      ? argPaths.map((p) => resolve(process.cwd(), p))
+      : resolveDefaultArticlesDirs()
   try {
-    const slugs = listDraftSlugs(articlesDir)
+    const slugs = listDraftSlugs(articlesDirs)
     for (const slug of slugs) {
       process.stdout.write(`${slug}\n`)
     }
