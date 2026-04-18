@@ -14,11 +14,14 @@
  *     メッセージ付きで invalid を返す
  */
 import {
+  CARD_URL_MAX_LENGTH,
+  CARD_URL_MIN_LENGTH,
   CODEPEN_EMBED_PATH_PATTERN,
   CODESANDBOX_EMBED_ID_PATTERN,
   STACKBLITZ_EMBED_PATH_PATTERN,
   YOUTUBE_VIDEO_ID_PATTERN,
 } from '../../constants/zenn-embed'
+import { validateExternalUrl } from '../ogp/validateUrl'
 
 /**
  * 埋め込み ID の検査結果。`valid` が false の場合は `reason` に原因を含める。
@@ -146,6 +149,43 @@ export function validateStackBlitzPath(raw: string): EmbedIdValidationResult {
       label,
       raw,
       'edit/<project> (<=60 chars of [A-Za-z0-9_-]) or github/<owner>/<repo>',
+    )
+  }
+  return { valid: true }
+}
+
+/**
+ * `@[card](URL)` に渡す URL を検査する。
+ *
+ * 責務分担:
+ *   - 本 validator: 空文字 / 長さ / スキーム / ポートの静的検査
+ *   - SSRF / DNS リバインディング検査: ランタイム処理を伴うため、remark
+ *     プラグイン側で `resolveAndCheckDns` を呼ぶ `fetchOgp` に委譲する
+ *
+ * 空値や長さ超過、`javascript:` / `data:` 等は build fail の根拠として扱う。
+ * 成功時は `{ valid: true }` のみ返し、URL 文字列自体は呼出側で保持する。
+ */
+export function validateCardUrl(raw: string): EmbedIdValidationResult {
+  const label = 'Zenn card URL'
+  const nilFailure = validateNonEmpty(raw, label)
+  if (nilFailure !== null) {
+    return nilFailure
+  }
+  if (raw.length < CARD_URL_MIN_LENGTH) {
+    return createEmptyFailure(label)
+  }
+  if (raw.length > CARD_URL_MAX_LENGTH) {
+    return {
+      valid: false,
+      reason: `${label} "${raw.slice(0, 32)}..." exceeds max length ${CARD_URL_MAX_LENGTH}`,
+    }
+  }
+  const external = validateExternalUrl(raw)
+  if (!external.ok) {
+    return createPatternFailure(
+      label,
+      raw,
+      `absolute http(s) URL on port 80/443 (failed: ${external.reason ?? 'unknown'})`,
     )
   }
   return { valid: true }

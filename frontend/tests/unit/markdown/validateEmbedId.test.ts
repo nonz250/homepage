@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  validateCardUrl,
   validateCodePenPath,
   validateCodeSandboxId,
   validateStackBlitzPath,
   validateYouTubeVideoId,
 } from '../../../utils/markdown/validateEmbedId'
+import { CARD_URL_MAX_LENGTH } from '../../../constants/zenn-embed'
 
 /**
  * `validateEmbedId.ts` 各関数の単体テスト。
@@ -182,6 +184,70 @@ describe('validateStackBlitzPath', () => {
 
     it('rejects github paths missing repo', () => {
       const result = validateStackBlitzPath('github/stackblitz')
+      expect(result.valid).toBe(false)
+    })
+  })
+})
+
+describe('validateCardUrl', () => {
+  describe('valid cases', () => {
+    it('accepts a canonical https URL', () => {
+      const result = validateCardUrl('https://example.com/article')
+      expect(result.valid).toBe(true)
+      expect(result.reason).toBeUndefined()
+    })
+
+    it('accepts http on port 80 (implicit)', () => {
+      const result = validateCardUrl('http://example.com/')
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts URLs with query strings and fragments', () => {
+      const result = validateCardUrl('https://example.com/p?a=1&b=2#h')
+      expect(result.valid).toBe(true)
+    })
+  })
+
+  describe('invalid cases', () => {
+    it('rejects an empty string', () => {
+      const result = validateCardUrl('')
+      expect(result.valid).toBe(false)
+      expect(result.reason).toContain('non-empty')
+    })
+
+    it('rejects javascript: scheme', () => {
+      // eslint-disable-next-line no-script-url
+      const result = validateCardUrl('javascript:alert(1)')
+      expect(result.valid).toBe(false)
+      expect(result.reason).toContain('scheme')
+    })
+
+    it('rejects data: URL', () => {
+      const result = validateCardUrl('data:text/html,<h1>x</h1>')
+      expect(result.valid).toBe(false)
+      expect(result.reason).toContain('scheme')
+    })
+
+    it('rejects file: URL', () => {
+      const result = validateCardUrl('file:///etc/passwd')
+      expect(result.valid).toBe(false)
+    })
+
+    it('rejects URLs with disallowed port', () => {
+      const result = validateCardUrl('https://example.com:22/')
+      expect(result.valid).toBe(false)
+      expect(result.reason).toContain('port')
+    })
+
+    it('rejects URLs longer than max length', () => {
+      const longUrl = `https://example.com/${'a'.repeat(CARD_URL_MAX_LENGTH + 100)}`
+      const result = validateCardUrl(longUrl)
+      expect(result.valid).toBe(false)
+      expect(result.reason).toContain('exceeds max length')
+    })
+
+    it('rejects unparsable input', () => {
+      const result = validateCardUrl('not a url')
       expect(result.valid).toBe(false)
     })
   })

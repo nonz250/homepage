@@ -1,6 +1,6 @@
 /**
- * Zenn 独自記法の埋め込み (YouTube / CodePen / CodeSandbox / StackBlitz) に関する
- * 定数を集約するモジュール。
+ * Zenn 独自記法の埋め込み (YouTube / CodePen / CodeSandbox / StackBlitz / card)
+ * に関する定数を集約するモジュール。
  *
  * 埋め込み ID のバリデーション正規表現、iframe 埋め込み時の origin (ホスト)、
  * iframe の共通属性値などをすべてここに named export としてまとめ、マジック
@@ -10,6 +10,7 @@
  * 表に基づき `config/iframe-allowlist.ts` で単一ソースとして定義する。
  * 本モジュールはバリデーションと CSP 用 origin のみを提供する。
  */
+import { OGP_URL_MAX_LENGTH } from './ogp'
 
 /**
  * YouTube の videoId フォーマット。
@@ -76,6 +77,23 @@ export const STACKBLITZ_EMBED_PATH_PATTERN =
  * StackBlitz 埋め込みの iframe src 生成に使う origin。
  */
 export const STACKBLITZ_EMBED_ORIGIN = 'https://stackblitz.com'
+
+/**
+ * `@[card](URL)` に渡す URL の最小長 (空文字拒否用)。
+ *
+ * 空文字や空白のみの URL は build fail させ、静かに card が消えるのを防ぐ。
+ */
+export const CARD_URL_MIN_LENGTH = 1
+
+/**
+ * `@[card](URL)` に渡す URL の最大長。
+ *
+ * 検査の統一のため OGP 側 (`OGP_URL_MAX_LENGTH = 2048`) と同じ閾値を使う。
+ * スキーム / ポート / IP 帯域検査は `utils/ogp/validateUrl.ts` の
+ * `validateExternalUrl` + `resolveAndCheckDns` に委譲し、本定数では長さの
+ * 上限のみを提示する。
+ */
+export const CARD_URL_MAX_LENGTH = OGP_URL_MAX_LENGTH
 
 /**
  * iframe の `loading` 属性値。埋め込みはすべて lazy ロードする。
