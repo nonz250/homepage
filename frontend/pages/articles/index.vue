@@ -12,6 +12,10 @@
  *
  * 既存ページ (pages/index.vue) と同じく、components は parts/atoms の
  * prefix 付き auto-import ではなく、明示的 import で利用する方針に揃える。
+ *
+ * レイアウトは index ページと同じく graph ↔ parallax-bg の交互構造に
+ * 揃える。ヘッダ (h1) は parallax-bg (斜線) 背景、記事リストは graph
+ * (方眼紙) 背景に配置する。
  */
 import ArticleCard from '~/components/parts/ArticleCard.vue'
 import { useArticles } from '~/composables/useArticles'
@@ -33,31 +37,43 @@ useHead({
 </script>
 
 <template>
-  <main class="articles-list content">
-    <h1 class="page-title">
-      Articles
-    </h1>
-    <ul v-if="articles.length > 0" class="article-grid">
-      <li v-for="article in articles" :key="article.slug">
-        <article-card :article="article" :is-draft="preview && !article.published" />
-      </li>
-    </ul>
-    <p v-else class="empty">
-      まだ記事がありません。
-    </p>
+  <main>
+    <div class="parallax-bg">
+      <section class="content articles-header">
+        <h1 class="page-title">
+          Articles
+        </h1>
+      </section>
+    </div>
+    <div class="graph">
+      <section class="content articles-list-section">
+        <ul v-if="articles.length > 0" class="article-list">
+          <li v-for="article in articles" :key="article.slug" class="article-list-item">
+            <article-card :article="article" :is-draft="preview && !article.published" />
+          </li>
+        </ul>
+        <p v-else class="empty">
+          まだ記事がありません。
+        </p>
+      </section>
+    </div>
   </main>
 </template>
 
 <style scoped lang="scss">
 @use "assets/scss/color";
-@use "assets/scss/size";
 
-.articles-list {
-  padding-bottom: 3rem;
+.articles-header {
+  padding-top: 1rem;
+}
+
+.articles-list-section {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .page-title {
-  margin: 0 0 1.5rem 0;
+  margin: 0;
   padding: 0;
   font-size: 2rem;
   font-weight: normal;
@@ -67,13 +83,17 @@ useHead({
   }
 }
 
-.article-grid {
+.article-list {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(size.$item-size, 1fr));
+}
+
+.article-list-item {
+  width: 100%;
 }
 
 .empty {
