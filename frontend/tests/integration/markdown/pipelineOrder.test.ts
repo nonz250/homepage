@@ -130,8 +130,10 @@ describe('zenn markdown pipeline (integration)', () => {
   })
 
   describe('unsupported syntax still fails build', () => {
-    it('throws when @[card] remains after Zenn embed pass', () => {
-      const md = '@[card](https://example.com)\n'
+    it('throws when @[tweet] remains after Zenn embed pass', () => {
+      // `@[card]` は Phase 3 Batch B で対応済みのため対象から除外し、
+      // 未対応の `@[tweet]` で回帰を確認する。
+      const md = '@[tweet](https://example.com/status/1)\n'
       expect(() => runPipeline(md)).toThrow()
     })
 

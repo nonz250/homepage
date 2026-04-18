@@ -72,10 +72,15 @@ describe('rehypeAssertNoZennLeftovers', () => {
   })
 
   describe('unsupported embed directives', () => {
-    it('throws on `@[card](url)` leftover', () => {
+    it('does not throw on `@[card](url)` (supported since Phase 3 Batch B)', () => {
+      // `card` は remark-zenn-card が処理して containerComponent に変換する
+      // 想定だが、万一素通しされて hast に link として残ったとしても、本
+      // プラグインの SUPPORTED_EMBED_NAMES に含まれているため build fail に
+      // はしない (= remark-zenn-card が走らないテストパイプラインでは leftover
+      // として扱わない)。
       expect(() =>
         processMarkdownToHast('@[card](https://example.com)\n'),
-      ).toThrowError(UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX)
+      ).not.toThrow()
     })
 
     it('throws on `@[tweet]` leftover', () => {
@@ -117,11 +122,15 @@ describe('rehypeAssertNoZennLeftovers', () => {
   })
 
   describe('mixed cases', () => {
-    it('collects multiple leftovers in a single error message', () => {
+    it('throws only on unsupported names when mixed with supported card', () => {
+      // `@[card]` は Phase 3 Batch B で許可済み、`@[tweet]` は未対応のまま。
+      // 混在時は tweet のみ throw 理由に含まれること。
       const md = [
         'intro',
         '',
         '@[card](https://example.com)',
+        '',
+        '@[tweet](https://example.com/status/1)',
         '',
         ':::warning',
         'body',
@@ -129,7 +138,7 @@ describe('rehypeAssertNoZennLeftovers', () => {
         '',
       ].join('\n')
       const attempt = () => processMarkdownToHast(md)
-      expect(attempt).toThrowError(/@\[card\]/)
+      expect(attempt).toThrowError(/@\[tweet\]/)
       expect(attempt).toThrowError(/warning/)
     })
   })
@@ -229,6 +238,26 @@ describe('rehypeAssertNoZennLeftovers', () => {
       expect(() => processWithMdcToHast(md)).not.toThrowError(
         UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX,
       )
+    })
+  })
+
+  describe('zenn-embed-card is listed in KNOWN_MDC_RESULT_TAGS', () => {
+    /**
+     * remarkZennCard が生成する `containerComponent(name="zenn-embed-card")` は
+     * rehype 段階で `<zenn-embed-card>` element になる。本プラグインの
+     * allowlist に含まれていれば throw しないことを確認する。
+     */
+    it('does not throw for a <zenn-embed-card> element', () => {
+      // 直接 hast を組む代わりに、remark-mdc の element 昇格を利用する。
+      // `:::zenn-embed-card\n:::` は remark-mdc が `<zenn-embed-card>` element
+      // として hast に出力するため、allowlist 判定の動作確認ができる。
+      const md = [':::zenn-embed-card', ':::', ''].join('\n')
+      const processor = unified()
+        .use(remarkParse)
+        .use(remarkMdc)
+        .use(remarkRehype, { allowDangerousHtml: false })
+        .use(rehypeAssertNoZennLeftovers)
+      expect(() => processor.runSync(processor.parse(md))).not.toThrow()
     })
   })
 })

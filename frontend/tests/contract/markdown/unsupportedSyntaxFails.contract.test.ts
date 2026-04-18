@@ -20,20 +20,20 @@ import rehypeAssertNoZennLeftovers, {
 } from '../../../utils/markdown/rehypeAssertNoZennLeftovers'
 
 /**
- * Phase 3 対応予定の Zenn 記法が Phase 2 時点ではビルドを fail させる
- * 契約テスト。
+ * Phase 3 対応予定の Zenn 記法が、Phase 3 未対応 Batch の時点では
+ * ビルドを fail させる契約テスト。
  *
  * 対象記法:
- *   - `@[card](url)`:    ページリンクカード (Phase 3)
- *   - `@[tweet](url)`:   X/Twitter 埋め込み (Phase 3)
- *   - `@[gist](url)`:    GitHub Gist 埋め込み (Phase 3)
- *   - `@[mermaid]`:      mermaid 図 (Phase 3)
- *   - ` ```mermaid `:    mermaid code fence (Phase 3)
+ *   - `@[card](url)`:    Phase 3 Batch B で対応済み (本テストからは除外)
+ *   - `@[tweet](url)`:   X/Twitter 埋め込み (Phase 3 Batch C)
+ *   - `@[gist](url)`:    GitHub Gist 埋め込み (Phase 3 Batch C)
+ *   - `@[mermaid]`:      mermaid 図 (Phase 3 Batch C)
+ *   - ` ```mermaid `:    mermaid code fence (Phase 3 Batch C)
  *
  * 目的:
  *   - Phase 3 スコープに含まれる機能がフェーズ中途半端で漏れると、
  *     本番記事で「レンダリングされない謎のテキスト」が静かに出てしまう
- *   - 本テストは fixture md を pipeline に流し、Phase 2 時点では
+ *   - 本テストは fixture md を pipeline に流し、Batch C 未対応時点では
  *     確実に throw されることを保証する
  *   - Phase 3 でこれらの機能を追加した時、本テストは意図的に更新する
  *     (fixture を移動する or 対応済みとして削除) 契約として機能する
@@ -93,11 +93,15 @@ function tryRunPipeline(md: string): Error | null {
 
 describe('phase 3 zenn syntax fails build in phase 2', () => {
   describe('@[card]', () => {
-    it('throws build error for fixture containing @[card](url)', () => {
+    it('does not throw any more (supported since Phase 3 Batch B)', () => {
+      // Phase 3 Batch B で `@[card](url)` は `remarkZennCard` により
+      // `<zenn-embed-card>` 相当の containerComponent に変換されるように
+      // なったため、本 Phase 2 互換 pipeline (remarkZennCard を含まない)
+      // でも `rehypeAssertNoZennLeftovers` の SUPPORTED_EMBED_NAMES に
+      // `'card'` が追加されたことで build fail しない。
       const md = loadFixtureBody('unsupported-card.md')
       const error = tryRunPipeline(md)
-      expect(error).not.toBeNull()
-      expect(error?.message).toMatch(/card/)
+      expect(error).toBeNull()
     })
   })
 
@@ -133,12 +137,12 @@ describe('phase 3 zenn syntax fails build in phase 2', () => {
       // 本プラグイン郡では 2 種類の build fail 経路がある:
       //   1. `remarkZennEmbed`: `@[youtube]` など「サポート対象サービスだが
       //      ID/URL が invalid」 (INVALID_ZENN_EMBED_ERROR_PREFIX)
-      //   2. `rehypeAssertNoZennLeftovers`: サポート外サービス `@[card]` など
+      //   2. `rehypeAssertNoZennLeftovers`: サポート外サービス `@[tweet]` など
       //      (UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX)
       //
-      // Phase 3 相当の `@[card]` は (2) 経由で落ちるべきで、メッセージ prefix
-      // が識別可能な形で含まれていることを担保する。
-      const md = loadFixtureBody('unsupported-card.md')
+      // Phase 3 Batch C 未対応の `@[tweet]` は (2) 経由で落ちるべきで、
+      // メッセージ prefix が識別可能な形で含まれていることを担保する。
+      const md = loadFixtureBody('unsupported-tweet.md')
       const error = tryRunPipeline(md)
       expect(error).not.toBeNull()
       expect([

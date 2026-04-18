@@ -48,14 +48,15 @@ const SUPPORTED_CONTAINER_NAMES: readonly string[] = Object.freeze([
  * 防ぐため fail させる。
  */
 const KNOWN_MDC_RESULT_TAGS: ReadonlySet<string> = new Set([
-  // Zenn 専用 MDC コンポーネント (remark-zenn-container / remark-zenn-embed が
-  // 生成する kebab-case タグ名)。
+  // Zenn 専用 MDC コンポーネント (remark-zenn-container / remark-zenn-embed /
+  // remark-zenn-card が生成する kebab-case タグ名)。
   'zenn-message',
   'zenn-details',
   'zenn-embed-you-tube',
   'zenn-embed-code-pen',
   'zenn-embed-code-sandbox',
   'zenn-embed-stack-blitz',
+  'zenn-embed-card',
 ])
 
 /**
@@ -100,17 +101,23 @@ const CODE_LANGUAGE_CLASS_PREFIX = 'language-'
 const ZENN_EMBED_DIRECTIVE_PATTERN = /@\[([A-Za-z][A-Za-z0-9_-]*)\]/g
 
 /**
- * フェーズ 2 で対応済みの `@[name]` 記法 (埋め込み系)。これに該当しない name を
- * 持つ `@[xxx]` が本 rehype プラグインの時点で残っていたら build fail。
+ * フェーズ 2 以降で対応済みの `@[name]` 記法 (埋め込み系)。これに該当しない
+ * name を持つ `@[xxx]` が本 rehype プラグインの時点で残っていたら build fail。
  *
- * 注意: これらの name は `remarkZennEmbed` (Batch C) が処理すると
- * HAST に link として残らないはずなので、ここに来る時点で未変換 = 失敗扱い。
+ * - `youtube` / `codepen` / `codesandbox` / `stackblitz`: Phase 2 で対応
+ *   (`remarkZennEmbed`)
+ * - `card`: Phase 3 Batch B で対応 (`remarkZennCard`)。変換失敗した場合も
+ *   fallback card に落とすため、ここに到達する時点で何かが壊れている扱い。
+ *
+ * 注意: これらの name は remark プラグインが処理すると HAST に link として
+ * 残らないはずなので、ここに来る時点で未変換 = 失敗扱い。
  */
 const SUPPORTED_EMBED_NAMES: readonly string[] = Object.freeze([
   'youtube',
   'codepen',
   'codesandbox',
   'stackblitz',
+  'card',
 ])
 
 /**

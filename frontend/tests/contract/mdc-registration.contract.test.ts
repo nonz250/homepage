@@ -32,6 +32,7 @@ const EXPECTED_ZENN_COMPONENTS: readonly string[] = [
   'ZennEmbedCodePen.vue',
   'ZennEmbedCodeSandbox.vue',
   'ZennEmbedStackBlitz.vue',
+  'ZennEmbedCard.vue',
 ] as const
 
 /**
