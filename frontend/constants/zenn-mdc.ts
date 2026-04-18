@@ -55,3 +55,11 @@ export const ZENN_EMBED_CODESANDBOX_TAG = 'zenn-embed-code-sandbox'
  * `@[stackblitz]` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
  */
 export const ZENN_EMBED_STACKBLITZ_TAG = 'zenn-embed-stack-blitz'
+
+/**
+ * `@[card](URL)` 埋め込み記法を変換した先の MDC コンポーネントタグ名。
+ *
+ * `ZennEmbedCard.vue` と対応する。build 時に OGP を取得し、成功時は
+ * 取得したメタデータ、失敗時は URL ホスト名を fallback として props に載せる。
+ */
+export const ZENN_EMBED_CARD_TAG = 'zenn-embed-card'
