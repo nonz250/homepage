@@ -1,0 +1,33 @@
+# Phase 3 Batch D: セキュリティヘッダ検証専用の compose file。
+#
+# 目的:
+#   - `frontend/.output/public/` (npm run generate の成果物) を nginx の
+#     static root として配信し、`Content-Security-Policy-Report-Only` などの
+#     ヘッダが期待どおり返ることを CI / ローカルで確認する。
+#   - `docker-compose.prod.yml` とは独立。web サービスは起動せず、nginx
+#     単体で動かす。
+#
+# 使い方 (ローカル):
+#   1. `NO_NETWORK_FETCH=1 npm --prefix frontend run generate`
+#   2. `docker compose -f docker-compose.security-test.yml up -d proxy`
+#   3. `bash scripts/assert-security-headers.sh`
+#   4. `docker compose -f docker-compose.security-test.yml down`
+#
+# 上書きの仕掛け:
+#   - Dockerfile の `default.conf` (proxy 版) を `test.conf` (static 版)
+#     で read-only bind mount し、同一イメージを再利用する。
+#
+# バージョン宣言は Compose v2 では任意だが、`docker-compose.prod.yml` と
+# 表記が揃うよう明示する。
+version: "3"
+services:
+  proxy:
+    build:
+      context: infra/nginx
+      dockerfile: Dockerfile
+    command: ["nginx", "-g", "daemon off;"]
+    volumes:
+      - ./infra/nginx/test.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/.output/public:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
