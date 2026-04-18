@@ -493,7 +493,10 @@ export default defineNuxtConfig({
         { property: 'og:description', content: 'https://nozomi.bike' },
         { property: 'og:url', content: 'https://nozomi.bike' },
         { property: 'og:image', content: 'https://nozomi.bike/images/homepage-ogp.webp' },
-        { property: 'og:image:alt', content: 'Business card' },
+        // `og:image:alt` は Phase 0 以前の "Business card" が残っており、
+        // 現サイトの記事/ポートフォリオ用途と一致しないため削除。記事別の
+        // 動的 alt は後続 Phase で検討する (今は未設定のほうが誤表示より
+        // 安全)。
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
