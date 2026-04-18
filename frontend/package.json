@@ -26,9 +26,13 @@
     "gray-matter": "^4.0.3",
     "happy-dom": "^20.9.0",
     "http-server": "^14.1.1",
+    "katex": "^0.16.45",
     "material-icons": "^1.13.1",
     "nuxt": "^3.19.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "sass": "^1.57.1",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "zenn-markdown-html": "^0.4.7"
   }
 }

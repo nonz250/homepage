@@ -3,12 +3,19 @@ import { dirname, resolve } from 'node:path'
 import { normalizePreviewFlag } from './utils/env/isPreview'
 import { loadArticlesFromFs } from './utils/prerender/loadArticlesFromFs'
 import { buildPrerenderRoutes } from './utils/prerender/buildPrerenderRoutes'
+import { buildTagsIndex } from './utils/prerender/buildTagsIndex'
 import { collectSlugEntriesFromDirs } from './utils/prerender/collectSlugEntriesFromDirs'
 import {
   detectSlugCollisions,
   formatSlugCollisionError,
 } from './utils/prerender/detectSlugCollisions'
+import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
+import remarkZennContainer from './utils/markdown/remarkZennContainer'
+import remarkZennEmbed from './utils/markdown/remarkZennEmbed'
+import rehypeAssertNoZennLeftovers from './utils/markdown/rehypeAssertNoZennLeftovers'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
@@ -45,6 +52,45 @@ const REMARK_ZENN_IMAGE_PATH = resolve(
   './utils/markdown/remarkZennImage.ts',
 )
 
+/**
+ * 自作 remark プラグイン (`remarkZennContainer`) の絶対パス。
+ * Zenn 独自のコンテナ記法 (`:::message` / `:::details`) を MDC
+ * コンポーネント (`zenn-message` / `zenn-details`) に橋渡しする。
+ */
+const REMARK_ZENN_CONTAINER_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennContainer.ts',
+)
+
+/**
+ * 自作 remark プラグイン (`remarkZennEmbed`) の絶対パス。
+ * Zenn 独自の埋め込み記法 (`@[youtube](...)` 等) を MDC 埋め込み
+ * コンポーネントに橋渡しし、URL/ID の正規化とバリデーションも行う。
+ */
+const REMARK_ZENN_EMBED_PATH = resolve(
+  __dirname,
+  './utils/markdown/remarkZennEmbed.ts',
+)
+
+/**
+ * 自作 rehype プラグイン (`rehypeAssertNoZennLeftovers`) の絶対パス。
+ * 未対応 Zenn 記法 (`@[card]` / `:::warning` 等) が rehype 段階で残留
+ * していた場合にビルドを fail させる安全網。
+ */
+const REHYPE_ASSERT_NO_ZENN_LEFTOVERS_PATH = resolve(
+  __dirname,
+  './utils/markdown/rehypeAssertNoZennLeftovers.ts',
+)
+
+/**
+ * KaTeX の組み込み CSS へのパス。`katex` パッケージが提供する
+ * `dist/katex.min.css` を Nuxt の `css` オプションで読み込むことで、
+ * `rehype-katex` が生成する `.katex` 要素に適切なフォント/レイアウトが
+ * 適用される。直書きせず named 定数として切り出し、依存先パスが変わった
+ * ときの影響範囲を 1 箇所に閉じ込める。
+ */
+const KATEX_CSS_PATH = 'katex/dist/katex.min.css'
+
 /** articles 画像を公開配信するパス */
 const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 
@@ -72,12 +118,55 @@ export default defineNuxtConfig({
   content: {
     build: {
       markdown: {
+        // Zenn 互換記法を Nuxt Content の MDC / HAST パイプラインに繋ぐ
+        // プラグイン群。Nuxt Content v3 (`@nuxtjs/mdc`) のデフォルトには
+        // `remark-mdc` / `remark-gfm` / `remark2rehype` が含まれるため、
+        // ここに追加したユーザー plugin はそれらの **後** に走る。
+        //
+        // remark の適用順序 (`Object.entries` 挿入順で `processor.use`):
+        //   1. `remark-zenn-container`: `:::message` / `:::details` を
+        //      `zenn-*` MDC コンテナに昇格 / リネーム
+        //   2. `remark-zenn-embed`:     `@[service](url)` を
+        //      `zenn-embed-*` MDC コンテナに昇格 (URL 正規化 + バリデーション)
+        //   3. `remark-zenn-image`:     Zenn の `/images/...` を
+        //      `/articles-images/...` に書き換え
+        //   4. `remark-math`:           `$...$` / `$$...$$` を math ノードに
+        //                               昇格 (後段 rehype-katex が HTML 化)
+        //
+        // rehype:
+        //   1. `rehype-katex`:                     math ノードを KaTeX HTML に変換
+        //   2. `rehype-assert-no-zenn-leftovers`:  末尾に配置。未対応記法が
+        //                                          残っていれば throw して
+        //                                          build fail させる安全網
         remarkPlugins: {
+          'remark-zenn-container': {
+            instance: remarkZennContainer,
+            src: REMARK_ZENN_CONTAINER_PATH,
+            options: {},
+          },
+          'remark-zenn-embed': {
+            instance: remarkZennEmbed,
+            src: REMARK_ZENN_EMBED_PATH,
+            options: {},
+          },
           'remark-zenn-image': {
             instance: remarkZennImage,
             src: REMARK_ZENN_IMAGE_PATH,
-            // @nuxtjs/mdc の mdc-imports テンプレートが options 未指定
-            // 時に plugin オブジェクト全体を渡してしまう挙動の回避。
+            options: {},
+          },
+          'remark-math': {
+            instance: remarkMath,
+            options: {},
+          },
+        },
+        rehypePlugins: {
+          'rehype-katex': {
+            instance: rehypeKatex,
+            options: {},
+          },
+          'rehype-assert-no-zenn-leftovers': {
+            instance: rehypeAssertNoZennLeftovers,
+            src: REHYPE_ASSERT_NO_ZENN_LEFTOVERS_PATH,
             options: {},
           },
         },
@@ -86,6 +175,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // ビルド時に書き出すタグ index (JSON 文字列)。
+    // 実値は `nitro:config` hook で決定し、server handler
+    // (`server/routes/tags.json.get.ts`) から参照する。
+    // server 専用の情報なので `public` 配下には置かない。
+    tagsIndexJson: '{}',
     public: {
       // サーバ/クライアントで共有されるプレビュー制御フラグ。
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
@@ -122,6 +216,12 @@ export default defineNuxtConfig({
     // Nuxt Content v3 の `queryCollection` は server runtime API なので
     // build hook からは使えない。gray-matter で frontmatter を直接パースする
     // fallback を採用 (ADR Phase 1 で合意済み)。
+    //
+    // タグ index は nitro server handler (`server/routes/tags.json.get.ts`)
+    // 経由で `/tags.json` として配信する。prerender 時に `crawlLinks` で
+    // 踏まれたときにも静的ファイル `.output/public/tags.json` が emit される。
+    // その生データ (JSON 文字列) は `runtimeConfig.tagsIndexJson` としてここで
+    // 固めて server handler に渡す。
     'nitro:config'(nitroConfig) {
       // dev モード (nuxt dev) では prerender 経路自体が無効なため早期 return。
       if (nitroConfig.dev) {
@@ -143,15 +243,35 @@ export default defineNuxtConfig({
           ? false
           : normalizePreviewFlag(process.env.CONTENT_PREVIEW)
       const articles = loadArticlesFromFs(ARTICLE_SOURCE_DIRS)
-      const routes = buildPrerenderRoutes(articles, getBuildTime(), {
+      const buildTime = getBuildTime()
+      const routes = buildPrerenderRoutes(articles, buildTime, {
         preview,
         nodeEnv,
       })
+      // タグ index をビルド時点で確定し、prerender 対象のタグページ URL と
+      // server handler が返す JSON の両方を同じデータから生成する
+      // (両者がズレるとタグページ 404 の原因になる)。
+      const tagsIndex = buildTagsIndex(articles, buildTime, {
+        preview,
+        nodeEnv,
+      })
+      const tagRoutes = Object.keys(tagsIndex).map(
+        (tag) => `${ARTICLES_TAG_ROUTE_PREFIX}${tag}`,
+      )
       nitroConfig.prerender = nitroConfig.prerender ?? {}
       nitroConfig.prerender.routes = [
         ...(nitroConfig.prerender.routes ?? []),
         ...routes,
+        ...tagRoutes,
+        // `/tags.json` 自体も prerender 対象に含めることで、
+        // generate 成果物 `.output/public/tags.json` として emit される。
+        '/tags.json',
       ]
+      // server handler がランタイムで参照するデータ。`tagsIndex` そのものでも
+      // 良いが、runtimeConfig 上は JSON 文字列として固めた方が h3 側で
+      // `JSON.parse` → 返却の単純な経路で済む。
+      nitroConfig.runtimeConfig = nitroConfig.runtimeConfig ?? {}
+      nitroConfig.runtimeConfig.tagsIndexJson = JSON.stringify(tagsIndex)
     },
   },
 
@@ -160,6 +280,7 @@ export default defineNuxtConfig({
     '@fortawesome/fontawesome-svg-core/styles.css',
     'material-icons/iconfont/material-icons.css',
     '@fontsource/noto-sans-jp/japanese.css',
+    KATEX_CSS_PATH,
   ],
 
   app: {

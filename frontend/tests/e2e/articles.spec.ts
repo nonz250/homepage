@@ -28,9 +28,18 @@ const MISSING_SLUGS = ['not-published', 'some-future-article'] as const
  * 恒常的に 1 回出る既知の warning。本来は framework 側の問題で、Phase 1 の
  * スコープでは個別対応しない。allowlist に入れて他の新しい warning/error の
  * 検知のみを責務とする。
+ *
+ * Phase 2 で `@[youtube]` 埋め込みを記事に追加した際に以下 2 件も warning として
+ * 恒常的に出るようになった:
+ *   - `Allow attribute will take precedence over 'allowfullscreen'.`:
+ *     Chrome の iframe 属性評価で出るもの。YouTube 側の iframe 設計に起因する。
+ *   - `GPU stall due to ReadPixels`: Chrome の WebGL ドライバ警告。CI の
+ *     headless 環境でもたまに出る。記事の挙動とは無関係。
  */
 const KNOWN_HYDRATION_WARNINGS: readonly string[] = [
   'Hydration completed but contains mismatches.',
+  "Allow attribute will take precedence over 'allowfullscreen'.",
+  'GPU stall due to ReadPixels',
 ]
 
 /**
@@ -117,4 +126,56 @@ test.describe('non-existent articles are not served', () => {
       expect(response!.status()).toBe(404)
     })
   }
+})
+
+/**
+ * 有効なタグの一覧 (site-articles/hello.md の topics と一致)。
+ * `/articles/tags/[tag]` ページの 200 検証に使う。
+ */
+const EXISTING_TAGS = ['blog', 'announcement'] as const
+
+/** 存在しないタグ。404 を返すことを検証する。 */
+const MISSING_TAGS = ['nonexistent', 'made-up-tag'] as const
+
+test.describe('tag listing pages', () => {
+  for (const tag of EXISTING_TAGS) {
+    test(`/articles/tags/${tag} returns 200 and lists at least one article`, async ({ page }) => {
+      const issues = collectConsoleIssues(page)
+      const response = await page.goto(`/articles/tags/${tag}`)
+      expect(response, 'navigation response should exist').not.toBeNull()
+      expect(response!.status()).toBe(200)
+
+      await expect(page.locator('h1.page-title')).toContainText(`#${tag}`)
+      // 公開記事 hello が必ず含まれている (blog / announcement 両方の topic)。
+      // layout の <main> と page の <main> が 2 つあるため、記事リストを
+      // 1 つに絞り込んでから text を確認する。
+      await expect(page.locator('.article-list')).toContainText('ブログを移転しました')
+
+      expect(issues, 'no console errors or hydration warnings').toEqual([])
+    })
+  }
+
+  for (const tag of MISSING_TAGS) {
+    test(`/articles/tags/${tag} returns 404`, async ({ page }) => {
+      const response = await page.goto(`/articles/tags/${tag}`)
+      expect(response).not.toBeNull()
+      expect(response!.status()).toBe(404)
+    })
+  }
+})
+
+test.describe('tags index JSON artifact', () => {
+  test('/tags.json is served as application/json and has expected shape', async ({ request }) => {
+    const response = await request.get('/tags.json')
+    expect(response.status()).toBe(200)
+    // static file 配信なので content-type は server の実装次第。
+    // 少なくとも JSON として parse 可能であることを確認する。
+    const body = await response.json()
+    expect(typeof body).toBe('object')
+    expect(Array.isArray(body)).toBe(false)
+    for (const tag of EXISTING_TAGS) {
+      expect(Array.isArray(body[tag])).toBe(true)
+      expect(body[tag].length).toBeGreaterThan(0)
+    }
+  })
 })
