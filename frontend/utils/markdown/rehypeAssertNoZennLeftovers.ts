@@ -73,6 +73,23 @@ const UNSUPPORTED_MDC_TAGS: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * フェーズ 3 以降で対応する可能性があるが、Phase 2 ではビルドを fail させる
+ * コードブロック言語名 (`<code class="language-<name>">` の `<name>` 部分)。
+ *
+ * 例:
+ *   ` ```mermaid\n...\n``` ` は Phase 3 で `mermaid` 描画対応予定のため、
+ *   未対応のまま静かに `<code class="language-mermaid">` として残ると
+ *   読者には「謎のコードブロック」として見えてしまう。build 時に明示的
+ *   失敗させることで、Phase 2 時点での混入を防ぐ。
+ */
+const UNSUPPORTED_CODE_LANGUAGES: ReadonlySet<string> = new Set(['mermaid'])
+
+/**
+ * `<code>` 要素の className から `language-*` 指定を取り出すための接頭辞。
+ */
+const CODE_LANGUAGE_CLASS_PREFIX = 'language-'
+
+/**
  * `@[name]` 形式のうち、text node にそのまま残留する珍しいケース (コード等で
  * エスケープされていない場合) を拾う正規表現。
  *
@@ -118,7 +135,7 @@ export const UNSUPPORTED_ZENN_SYNTAX_ERROR_PREFIX =
  * 検知された違反箇所を表す内部型。
  */
 interface Leftover {
-  readonly kind: 'embed' | 'container' | 'element'
+  readonly kind: 'embed' | 'container' | 'element' | 'code'
   readonly raw: string
   readonly name: string
 }
@@ -159,6 +176,22 @@ function walk(
   ancestorTagNames: readonly string[],
   leftovers: Leftover[],
 ): void {
+  // element の段階で「自身が未対応の language 指定コードブロック」かを
+  // 先にチェックする。`<code class="language-mermaid">` のように祖先が
+  // `<code>` で無くても自身がコードである場合、さらに code 中の text を
+  // 走査しても意味がないため、検知後は子要素の走査を打ち切る。
+  if (node.type === 'element') {
+    const element = node as Element
+    const codeLang = extractUnsupportedCodeLanguage(element)
+    if (codeLang !== null) {
+      leftovers.push({
+        kind: 'code',
+        raw: `\`\`\`${codeLang}`,
+        name: codeLang,
+      })
+      return
+    }
+  }
   if (isInsideCode(ancestorTagNames)) {
     // コード文脈配下は検査しない。再帰は継続して内側要素へ進んでも
     // すべて同じ祖先判定で弾けるが、そもそも意味がないので早期 return。
@@ -173,6 +206,7 @@ function walk(
     if (parentNode.type === 'element') {
       collectAnchorLeftovers(parentNode as Element, leftovers)
       collectUnknownElementLeftovers(parentNode as Element, leftovers)
+      collectSpanDirectiveLeftovers(parentNode as Element, leftovers)
     }
     const nextAncestors =
       parentNode.type === 'element'
@@ -181,6 +215,91 @@ function walk(
     for (const child of iterateChildren(parentNode)) {
       walk(child, nextAncestors, leftovers)
     }
+  }
+}
+
+/**
+ * element が `<code class="language-<unsupported>">` の形をしていれば、
+ * その言語名を返す。それ以外は null。
+ *
+ * remark-mdc は `<pre><code class="language-xxx">` のネストを生成するため、
+ * `<code>` 本体を検査する。rehype-highlight 等が別のクラス体系に変換する
+ * 前提では作動しないが、本プロジェクトはハイライト処理を経由していないため
+ * 素の `language-xxx` 接頭辞で十分。
+ */
+function extractUnsupportedCodeLanguage(element: Element): string | null {
+  if (element.tagName !== 'code') {
+    return null
+  }
+  const rawClassName = element.properties?.className
+  const classList = normalizeClassName(rawClassName)
+  for (const cls of classList) {
+    if (!cls.startsWith(CODE_LANGUAGE_CLASS_PREFIX)) {
+      continue
+    }
+    const lang = cls.slice(CODE_LANGUAGE_CLASS_PREFIX.length)
+    if (UNSUPPORTED_CODE_LANGUAGES.has(lang)) {
+      return lang
+    }
+  }
+  return null
+}
+
+/**
+ * hast の `Element.properties.className` は string | string[] | boolean | ...
+ * の union になりうる。走査しやすい string[] に正規化する。
+ */
+function normalizeClassName(
+  raw: Element['properties'] extends Record<string, infer V> ? V : unknown,
+): readonly string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((item): item is string => typeof item === 'string')
+  }
+  if (typeof raw === 'string') {
+    return raw.split(/\s+/).filter((item) => item.length > 0)
+  }
+  return []
+}
+
+/**
+ * `@[name]` が remark-mdc により inline textComponent に変換されたケースを
+ * 検知する。hast 上は「直前 text が `@` で終わり、次の `<span>` 内部 text が
+ * 未対応 name」という形で現れる。
+ *
+ * 特に `@[mermaid]` は URL 部分を持たないため、anchor パターンではなく
+ * span パターンで検知する。
+ */
+function collectSpanDirectiveLeftovers(
+  parent: Element | Root,
+  leftovers: Leftover[],
+): void {
+  const children = parent.children
+  for (let index = 1; index < children.length; index += 1) {
+    const prev = children[index - 1]
+    const current = children[index]
+    if (!prev || !current) {
+      continue
+    }
+    if (prev.type !== 'text') {
+      continue
+    }
+    if (current.type !== 'element') {
+      continue
+    }
+    if ((current as Element).tagName !== 'span') {
+      continue
+    }
+    if (!((prev as Text).value ?? '').endsWith('@')) {
+      continue
+    }
+    const name = extractAnchorText(current as Element)
+    if (name.length === 0) {
+      continue
+    }
+    if (SUPPORTED_EMBED_NAMES.includes(name)) {
+      continue
+    }
+    leftovers.push({ kind: 'embed', raw: `@[${name}]`, name })
   }
 }
 
@@ -363,5 +482,7 @@ function leftoverKindLabel(kind: Leftover['kind']): string {
       return 'container'
     case 'element':
       return 'element'
+    case 'code':
+      return 'code'
   }
 }

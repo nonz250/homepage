@@ -134,6 +134,57 @@ describe('rehypeAssertNoZennLeftovers', () => {
     })
   })
 
+  describe('unsupported code block languages', () => {
+    /**
+     * ` ```mermaid ` のようなコードフェンスは remark-rehype により
+     * `<pre><code class="language-mermaid">` に変換される。Phase 3 で
+     * 対応予定の言語は Phase 2 時点では build fail させる。
+     */
+    it('throws when a mermaid code fence is present', () => {
+      const md = ['```mermaid', 'graph TD', '  A --> B', '```', ''].join('\n')
+      expect(() => processMarkdownToHast(md)).toThrowError(/mermaid/)
+    })
+
+    it('does not throw for supported languages (javascript/typescript/html)', () => {
+      const md = [
+        '```javascript',
+        'const a = 1',
+        '```',
+        '',
+        '```typescript',
+        'const b: number = 2',
+        '```',
+        '',
+        '```html',
+        '<div></div>',
+        '```',
+        '',
+      ].join('\n')
+      expect(() => processMarkdownToHast(md)).not.toThrow()
+    })
+  })
+
+  describe('unsupported span directives (@[mermaid] etc)', () => {
+    /**
+     * `@[mermaid]` は `(...)` の URL 部分を持たないため、remark-mdc が
+     * 「inline MDC directive」として `<span>` に変換する。hast 段階では
+     * 「`@` 末尾の text + 直後の `<span>mermaid</span>`」として現れる。
+     * 既存の anchor 検知パターンと同じ構造で span 版も検知し fail させる。
+     */
+    it('throws when @[mermaid] is present without URL part', () => {
+      const md = '@[mermaid]\n'
+      expect(() => processMarkdownToHast(md)).toThrowError(/mermaid/)
+    })
+
+    it('does not throw for a normal <span> (e.g. ::span syntax) with supported embed name', () => {
+      // 対応済みの @[youtube] は remark-mdc によって link に変換されるので
+      // 本テストの span 検知には引っかからない。あえて trivial に pass を
+      // 確認する。
+      const md = 'See https://example.com for details.\n'
+      expect(() => processMarkdownToHast(md)).not.toThrow()
+    })
+  })
+
   describe('unsupported container tags lifted by remark-mdc', () => {
     /**
      * remark-mdc は引数なしの `:::<name>` を `containerComponent` に昇格させ、
