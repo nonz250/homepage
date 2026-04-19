@@ -58,7 +58,11 @@ const __dirname = dirname(__filename)
 // 読み込み、URL は `/articles/[slug]` に統一する。
 const ARTICLES_DIR = resolve(__dirname, '../articles')
 const SITE_ARTICLES_DIR = resolve(__dirname, '../site-articles')
-const ARTICLES_IMAGES_DIR = resolve(__dirname, '../articles/images')
+// Zenn CLI (`npx zenn preview`) は `/images/*` を repo root 直下の `images/`
+// から配信する仕様。articles/ と site-articles/ の双方で同じパス記法
+// (`/images/<slug>/foo.png`) を使えるよう、Nuxt 側の static 配信元も root の
+// `images/` に合わせる。
+const ARTICLES_IMAGES_DIR = resolve(__dirname, '../images')
 
 /**
  * 記事 slug 衝突検知の対象ディレクトリ一覧。
@@ -344,8 +348,9 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    // ADR V-2: Zenn Connect 互換のため、リポジトリ root 直下の
-    // `articles/images/` を `/articles-images/` として静的配信する。
+    // ADR V-2: Zenn Connect / Zenn CLI 互換のため、リポジトリ root 直下の
+    // `images/` を `/articles-images/` として静的配信する。remarkZennImage が
+    // Markdown 内の `/images/...` を `/articles-images/...` に書換える。
     publicAssets: [
       {
         dir: ARTICLES_IMAGES_DIR,

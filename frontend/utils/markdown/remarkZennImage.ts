@@ -2,10 +2,10 @@
  * Zenn Connect 互換の画像参照パスを Nuxt の公開アセットパスへ書き換える
  * remark プラグイン (Phase 1 最小版)。
  *
- * 記事中の `![](/images/foo.png)` のような参照は、Zenn では
- * `articles/images/foo.png` を指す相対参照として解釈される。一方、本サイトでは
- * `nitro.publicAssets` で `articles/images/` を `/articles-images/` に
- * マウントしているため、配信パスを差し替える必要がある。
+ * 記事中の `![](/images/foo.png)` のような参照は、Zenn CLI / Zenn Connect が
+ * repo root 直下の `images/foo.png` を指す絶対パスとして解釈する。一方、
+ * 本サイトでは `nitro.publicAssets` で root の `images/` を `/articles-images/`
+ * に マウントしているため、配信パスを差し替える必要がある。
  *
  * Phase 1 スコープ:
  *   - `/images/...` (= `ARTICLES_IMAGES_SOURCE_PATH`) で始まる URL のみ書換
