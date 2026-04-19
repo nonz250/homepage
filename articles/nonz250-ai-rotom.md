@@ -4,7 +4,7 @@ emoji: "🤖"
 type: "tech"
 topics: ["ai", "mcp", "typescript", "pokemon"]
 published: true
-published_at: '2026-04-19T16:00:00+09:00'
+published_at: '2026-04-19 21:00'
 ---
 
 こんにちは。nonz250 です。皆さんはポケモンバトルをやっていますか？
