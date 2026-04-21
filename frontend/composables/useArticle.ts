@@ -8,6 +8,7 @@
 import { queryCollection } from '#imports'
 import { useContentPreview } from './useContentPreview'
 import {
+  isArticleSiteVisible,
   isArticleVisibleNow,
   toArticle,
   type Article,
@@ -27,6 +28,8 @@ const ARTICLE_PATH_PREFIX = '/'
  *
  * - 存在しない slug の場合は null
  * - preview でない場合、下書きまたは未公開 (published_at が未来) の記事は null
+ * - v4 で導入した `site` フラグが明示的に `false` の記事も非 preview では null
+ *   (default: true なので未指定記事は従来通り取得できる)
  * - preview = true なら条件無視で取得
  *
  * 返り値には `body` 等の本文情報はあえて含めず、ページ側で `queryCollection`
@@ -44,8 +47,13 @@ export async function useArticle(
   if (item === null) {
     return null
   }
-  if (!preview && !isArticleVisibleNow(item, Date.now())) {
-    return null
+  if (!preview) {
+    if (!isArticleVisibleNow(item, Date.now())) {
+      return null
+    }
+    if (!isArticleSiteVisible(item)) {
+      return null
+    }
   }
   return toArticle(item)
 }
