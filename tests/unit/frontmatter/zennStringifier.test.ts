@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { stringifyZennFrontmatter } from '../../../scripts/lib/frontmatter/zennStringifier'
 import type { ZennFrontmatter } from '../../../scripts/lib/frontmatter/toZennFrontmatter'
 
 /**
  * Zenn 向け stringifier のテスト。
  *
- * 最重要: 既存 `articles/nonz250-ai-rotom.md` の frontmatter ブロックを
- * byte レベルで再現できること (byte-parity snapshot)。
- *
- * 現行ファイルから観測した仕様:
+ * 合成 fixture を使って出力形式を契約化する:
  *   - キー順: title → emoji → type → topics → published → published_at
  *   - title / emoji / type: ダブルクォート `"..."`
  *   - topics: **フロースタイル** `["ai", "mcp", "typescript", "pokemon"]`
@@ -19,6 +14,9 @@ import type { ZennFrontmatter } from '../../../scripts/lib/frontmatter/toZennFro
  *   - published: 裸の `true` / `false`
  *   - published_at: **シングルクォート** `'2026-04-19 21:00'`
  *   - frontmatter 末尾: `---\n`
+ *
+ * 実リポジトリの記事を使った byte-parity snapshot は廃止した。記事は動的
+ * コンテンツで変更が通常運用のため、pin し続けても偽陽性を増やすだけ。
  */
 describe('stringifyZennFrontmatter', () => {
   it('produces the exact frontmatter block observed in existing article (byte-parity)', () => {
@@ -63,34 +61,6 @@ describe('stringifyZennFrontmatter', () => {
     expect(hash).toBe(
       '44a12e62c3f31827c5a25087a84812484c132b8001d269268eeecdda2a101d0f',
     )
-  })
-
-  it('produces a whole-file byte-parity output when combined with body', () => {
-    const fixtureSite = resolve(
-      __dirname,
-      '../../fixtures/site-articles/ai-rotom-tech.md',
-    )
-    const fixtureExpected = resolve(
-      __dirname,
-      '../../fixtures/articles/nonz250-ai-rotom.md.expected',
-    )
-    const raw = readFileSync(fixtureSite, 'utf8')
-    const matter = require('gray-matter')
-    const parsed = matter(raw)
-    const fm: ZennFrontmatter = {
-      title: parsed.data.title,
-      emoji: parsed.data.emoji,
-      type: parsed.data.type,
-      topics: parsed.data.topics,
-      published: parsed.data.published,
-      published_at: parsed.data.published_at,
-    }
-    const composed = stringifyZennFrontmatter(fm) + parsed.content
-    const expected = readFileSync(fixtureExpected, 'utf8')
-    expect(composed).toBe(expected)
-    const actualHash = createHash('sha256').update(composed).digest('hex')
-    const expectedHash = createHash('sha256').update(expected).digest('hex')
-    expect(actualHash).toBe(expectedHash)
   })
 
   it('escapes double quotes in title by YAML double-quoting rules', () => {
