@@ -67,6 +67,8 @@ describe('loadArticlesFromFs', () => {
         published: true,
         published_at: '2026-04-18T00:00:00+09:00',
         topics: ['blog', 'announcement'],
+        emoji: undefined,
+        site: true,
       },
     ])
   })
@@ -126,6 +128,8 @@ describe('loadArticlesFromFs', () => {
         published: false,
         published_at: undefined,
         topics: [],
+        emoji: undefined,
+        site: true,
       },
     ])
   })
@@ -170,6 +174,39 @@ describe('loadArticlesFromFs', () => {
     writeArticle(dir, 'README.txt', 'skip me')
 
     expect(loadArticlesFromFs(dir).map((a) => a.slug)).toEqual(['hello'])
+  })
+
+  it('defaults site to true when the flag is missing', () => {
+    const dir = join(tmpRoot, 'articles')
+    mkdirSync(dir)
+    writeArticle(
+      dir,
+      'no-site.md',
+      '---\ntitle: legacy\npublished: true\n---\n',
+    )
+    expect(loadArticlesFromFs(dir)[0].site).toBe(true)
+  })
+
+  it('reads explicit site:false from frontmatter', () => {
+    const dir = join(tmpRoot, 'articles')
+    mkdirSync(dir)
+    writeArticle(
+      dir,
+      'hidden.md',
+      '---\ntitle: hidden\npublished: true\nsite: false\n---\n',
+    )
+    expect(loadArticlesFromFs(dir)[0].site).toBe(false)
+  })
+
+  it('defaults site to true when site has a non-boolean value', () => {
+    const dir = join(tmpRoot, 'articles')
+    mkdirSync(dir)
+    writeArticle(
+      dir,
+      'garbage-site.md',
+      '---\ntitle: g\npublished: true\nsite: maybe\n---\n',
+    )
+    expect(loadArticlesFromFs(dir)[0].site).toBe(true)
   })
 
   it('falls back to empty string when title is missing or non-string', () => {

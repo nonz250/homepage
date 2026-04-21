@@ -28,6 +28,14 @@ import type { TagIndexArticle } from './buildTagsIndex'
 const MARKDOWN_EXTENSION = '.md'
 
 /**
+ * frontmatter に `site` が指定されなかった / 壊れた値だった場合のデフォルト。
+ *
+ * v4 で追加した配信フラグ。既存記事を事故で消さないよう安全側 (true) に寄せる。
+ * UI (composable) 側の `coerceSiteVisibility` と挙動を一致させている。
+ */
+const DEFAULT_SITE_FLAG_WHEN_MISSING = true
+
+/**
  * `loadArticlesFromFs` の戻り値型。
  *
  * `Article` (prerender 判定) と `TagIndexArticle` (タグ index 構築) の
@@ -49,6 +57,13 @@ export interface LoadedArticle extends Article, TagIndexArticle {
    * OGP 画像左上のアクセントとして利用される。未指定なら undefined。
    */
   readonly emoji?: string
+  /**
+   * 本サイトへの配信可否 (v4)。
+   * frontmatter の `site` を boolean に正規化した値。未指定時は true
+   * ({@link DEFAULT_SITE_FLAG_WHEN_MISSING}) に倒し、旧来の記事と同等に扱う。
+   * RSS (`/feed.xml`) 等の build 時 I/O 経路で site:false を除外するために使う。
+   */
+  readonly site: boolean
 }
 
 /**
@@ -89,6 +104,10 @@ export function loadArticlesFromFs(
           typeof data.published_at === 'string' ? data.published_at : undefined,
         topics: coerceTopics(data.topics),
         emoji: typeof data.emoji === 'string' ? data.emoji : undefined,
+        site:
+          typeof data.site === 'boolean'
+            ? data.site
+            : DEFAULT_SITE_FLAG_WHEN_MISSING,
       })
     }
   }
