@@ -20,7 +20,10 @@ import { useRuntimeConfig } from 'nitropack/runtime'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { loadArticlesFromFs } from '../../utils/prerender/loadArticlesFromFs'
-import { isArticleVisibleNow } from '../../utils/article/articleVisibility'
+import {
+  isArticleSiteVisible,
+  isArticleVisibleNow,
+} from '../../utils/article/articleVisibility'
 import {
   buildRssFeed,
   type RssFeedItem,
@@ -39,23 +42,17 @@ const CONTENT_TYPE_RSS = 'application/rss+xml; charset=utf-8'
 const FALLBACK_BASE_URL = 'https://nozomi.bike'
 
 /**
- * server route の相対パスから記事ディレクトリの絶対パスを解決する。
+ * server route の相対パスから記事ソースディレクトリの絶対パスを解決する (v4)。
  *
- * `frontend/server/routes/feed.xml.get.ts` から見て
- *   - `../../../articles`      → リポジトリ root/articles (Zenn 共有)
- *   - `../../../site-articles` → リポジトリ root/site-articles (本サイト限定)
- * の 2 箇所を走査する。`nuxt.config.ts` の `nitro:config` hook と同じ構成で、
- * 両者に title/published/published_at の値をそろえる必要がある。
+ * v4 では原典が `site-articles/` に統一されたため、この 1 箇所だけを走査する。
+ * `articles/` は generator の出力であり、本サイト RSS には使わない。
  */
-function resolveArticleSourceDirs(): readonly string[] {
+function resolveArticleSourceDir(): string {
   const currentFile = fileURLToPath(import.meta.url)
   const currentDir = dirname(currentFile)
   // server/routes → server → frontend → repo root
   const repoRoot = resolve(currentDir, '../../../')
-  return [
-    resolve(repoRoot, 'articles'),
-    resolve(repoRoot, 'site-articles'),
-  ] as const
+  return resolve(repoRoot, 'site-articles')
 }
 
 export default defineEventHandler((event) => {
@@ -68,12 +65,14 @@ export default defineEventHandler((event) => {
       : FALLBACK_BASE_URL
 
   const now = Date.now()
-  const articles = loadArticlesFromFs(resolveArticleSourceDirs())
+  const articles = loadArticlesFromFs(resolveArticleSourceDir())
 
-  // 公開判定 → タイトル/日時の健全性チェック → `published_at` 降順ソート。
+  // 公開判定 → サイト配信フラグ判定 → タイトル/日時の健全性チェック →
+  // `published_at` 降順ソート。
   // `buildRssFeed` は入力順を保持する純関数なので、ソート責務はここに置く。
   const visibleItems: RssFeedItem[] = articles
     .filter((article) => isArticleVisibleNow(article, now))
+    .filter((article) => isArticleSiteVisible(article))
     .filter((article) => article.title !== '' && article.published_at !== undefined)
     .sort((a, b) => {
       // フィルタ済みで undefined ではないことは保証されているが、

@@ -1,0 +1,280 @@
+# Publish pipeline for nonz250/homepage (v4 content architecture)
+#
+# 4 job 直列構成:
+#
+#   generate -> qiita-publish -> auto-commit -> deploy
+#
+# - generate      : site-articles/*.md から articles/ と public/ を派生生成し、
+#                   fail-closed アサーションを全て通してから成果物を artifact
+#                   として upload する。
+# - qiita-publish : generated artifact を展開し、increments/qiita-cli の公式
+#                   composite action で Qiita に publish する。
+#                   qiita-cli の composite action は内部で public/*.md を
+#                   commit/push するため、QIITA_TOKEN はこの step の env
+#                   スコープにのみ渡す (他 job・他 step には漏らさない)。
+# - auto-commit   : qiita-publish が push した public/*.md を pull --rebase で
+#                   取り込んだ上で、generate job が作った articles/ と残存する
+#                   public/ 差分を [skip ci] 付きで push する。
+#                   GITHUB_TOKEN での push は他ワークフローを起動しない
+#                   (GitHub 仕様) ため、本ワークフロー自身の paths トリガ
+#                   と併せて二重に自己ループを防ぐ。
+# - deploy        : rsync + ssh で本番 nginx に静的生成物を配布する。
+#                   deploy.yml はバックアップ (workflow_dispatch) として残す。
+#
+# fork PR ガード:
+#   各 job の先頭 if で fork からの PR を弾く。push トリガーは base 側の
+#   リポジトリからしか動かないが、workflow_dispatch を fork から呼ばれる
+#   経路を将来考慮して明示的にガードする。
+#
+# SHA pin:
+#   外部 action は 40 文字の commit SHA に固定する。タグコメントを
+#   右端に付記してバージョンを人間可読に保つ。
+#     actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5         # v4
+#     actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020       # v4
+#     actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+#     actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+#     increments/qiita-cli/actions/publish@3d1289cc1b48fd3d6cd4c7e5dde9745292997046 # v1.8.0
+#     webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd     # v0.9.1
+
+name: Publish articles
+
+on:
+  push:
+    branches:
+      - main
+    # v4 パイプライン自身が articles/ と public/ を commit する。両 path は
+    # paths-ignore に入れて push トリガーから除外し、自己ループを防ぐ。
+    paths:
+      - 'site-articles/**'
+      - 'scripts/**'
+      - 'frontend/**'
+      - '.github/workflows/publish.yml'
+      - 'package.json'
+      - 'package-lock.json'
+    paths-ignore:
+      - 'articles/**'
+      - 'public/**'
+  workflow_dispatch:
+
+permissions:
+  # auto-commit job が articles/public の差分を push するために必要。
+  # qiita-cli の composite action 内の push も同権限を使う。
+  contents: write
+
+concurrency:
+  # 同一 ref での publish を直列化する。cancel-in-progress: false で、進行中の
+  # publish を後続が kill して中途半端な Qiita 公開を残さないようにする。
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate articles and public outputs
+    # fork PR / fork workflow_dispatch ガード。push トリガーでは fork は
+    # 到達しないが、将来的な workflow_dispatch 呼び出しの二重防御として明示する。
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+
+      - name: Remove stale qiita-cli remote cache
+        # 前回実行が残した public/.remote を除去する (サーバ側 state の複製
+        # が古い commit SHA とズレるのを避ける)。初回は存在しない想定。
+        run: rm -rf public/.remote
+
+      - name: Install root dependencies
+        # postinstall 起点の任意コード実行を避けるため --ignore-scripts を明示。
+        run: npm ci --ignore-scripts
+
+      - name: Assert site-articles frontmatter size
+        run: bash scripts/assert-frontmatter-size.sh site-articles
+
+      - name: Generate articles and public outputs
+        env:
+          # generator は commit SHA を raw.githubusercontent の永続 URL に
+          # 埋め込む。push 起点の sha をそのまま渡すことで、後続 push の
+          # ループとの SHA 整合性を確保する。
+          CONTENT_COMMIT_SHA: ${{ github.sha }}
+        run: npx tsx scripts/generate.ts
+
+      - name: Verify generated frontmatter round-trip
+        run: npm run verify:generated
+
+      - name: Assert forbidden patterns are absent
+        run: npm run assert:forbidden-patterns
+
+      - name: Assert public allowlist
+        run: npm run assert:public-allowlist
+
+      - name: Assert no leaked Qiita drafts
+        run: npm run assert:no-qiita-leaked-drafts
+
+      - name: Remove qiita-cli remote cache before upload
+        # generator は public/.remote を作らないが、万一混入した場合に備えた
+        # 多層防御。upload-artifact の include-hidden-files を有効にする前に
+        # 必ず削除する。
+        run: rm -rf public/.remote
+
+      - name: Upload generated artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: generated
+          path: |
+            articles/
+            public/
+          if-no-files-found: error
+          retention-days: 7
+          # public/.allowlist を artifact に含めるため hidden files を許可する。
+          # public/.remote は直前の step で削除済み。
+          include-hidden-files: true
+
+  qiita-publish:
+    name: Publish to Qiita via qiita-cli
+    needs: generate
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        # qiita-cli の composite action が git push するため、書き込める
+        # checkout が必要。token は default の GITHUB_TOKEN をそのまま使う。
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: generated
+          path: .
+
+      - name: Publish articles to Qiita
+        # 公式 composite action。内部で qiita publish --all を実行したのち、
+        # public/*.md を commit して push する。QIITA_TOKEN は**この step の
+        # with 経由のみ**で渡し、他 step の env には一切漏らさない。
+        uses: increments/qiita-cli/actions/publish@3d1289cc1b48fd3d6cd4c7e5dde9745292997046 # v1.8.0
+        with:
+          qiita-token: ${{ secrets.QIITA_TOKEN }}
+          root: "."
+
+  auto-commit:
+    name: Commit generated articles diff back to main
+    needs: qiita-publish
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          # 後続 push に必要。GITHUB_TOKEN は contents: write を持っている。
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download generated artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: generated
+          path: .
+
+      - name: Pull latest (incorporate qiita-cli push)
+        # qiita-publish job 内の composite action が public/*.md を push する
+        # ため、auto-commit は pull --rebase で最新を取り込んでから差分を
+        # 積む。rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
+        run: git pull --rebase origin "${GITHUB_REF_NAME}"
+
+      - name: Configure git identity
+        # github-actions[bot] を commit 主体にする。user.email は GitHub 推奨
+        # の noreply アドレス。
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Commit and push generator diff
+        # articles/ と public/ (allowlist 含む) の未 commit 差分のみ commit。
+        # qiita-cli が既に commit 済みの public/*.md は diff から消えるので、
+        # ここで push されるのは残余 (articles/, public/.allowlist など)。
+        # [skip ci] で test.yml や deploy.yml の誤起動も二重に防ぐ。
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          git add -- articles public
+          if git diff --staged --exit-code --quiet; then
+            echo "no diff to commit"
+            exit 0
+          fi
+          git commit -m "chore(content): sync generated output from ${SOURCE_SHA} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  deploy:
+    name: Deploy static site via rsync
+    needs: auto-commit
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        # auto-commit job の push 後に checkout し直すことで、最新の
+        # articles/ と public/ を含んだ state で build する。
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # auto-commit の push を確実に取り込むため明示 ref 指定は
+          # しない (default は起動時の sha)。実運用では pull されるのが
+          # push 直後の state なので、auto-commit の子 commit を取り込めない
+          # 懸念がある。それを避けるため ref を branch 名にして最新を拾う。
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.x'
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
+        run: npm rebuild better-sqlite3
+
+      - name: Nuxt prepare (generate .nuxt types)
+        run: npm run prepare
+
+      - name: Nuxt generate (static build)
+        run: npm run generate
+
+      - name: Assert no drafts in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-drafts.sh
+
+      - name: Assert no external images in build output
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/assert-no-external-images.sh
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via rsync
+        # host key は手動受容 (UserKnownHostsFile=/dev/null) で維持。deploy.yml
+        # のバックアップと同じ挙動を踏襲する。将来的に known_hosts ピン留めを
+        # 導入する場合は別 PR で扱う。
+        run: >-
+          rsync -ahvz --delete
+          -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+          ./
+          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:www/homepage
+          --include-from="../.github/rsync_include.txt"
+          --exclude-from="../.github/rsync_exclude.txt"

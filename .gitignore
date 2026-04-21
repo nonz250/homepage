@@ -2,3 +2,19 @@ node_modules/
 *.log
 .DS_Store
 .idea/
+
+# Qiita CLI が生成するサーバ側キャッシュ。Qiita 側の公開済み記事本文を
+# 含むことがあるため、漏洩リスクを避けて追跡しない。
+public/.remote/
+
+# Qiita から sync された UUID basename の記事ファイル。generator 出力では
+# ない (原典外) ため追跡しない。basename は 16 進小文字 32 桁 UUID 様。
+/public/[a-f0-9]*.md
+
+# ただし allowlist マニフェスト (public/.allowlist) は追跡する。
+# 上の /public/[a-f0-9]*.md には dotfile は含まれないが、明示で残す。
+!public/.allowlist
+
+# Nuxt のビルド成果物 / キャッシュ。
+frontend/.output/
+frontend/.nuxt/

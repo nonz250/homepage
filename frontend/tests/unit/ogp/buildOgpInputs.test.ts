@@ -26,6 +26,8 @@ function article(overrides: Partial<OgpSourceArticle>): OgpSourceArticle {
     published_at: overrides.published_at,
     topics: overrides.topics ?? [],
     emoji: overrides.emoji,
+    // v4: `site` は `LoadedArticle` 側で required。fixture はサイト配信扱いで固定。
+    site: overrides.site ?? true,
   }
 }
 

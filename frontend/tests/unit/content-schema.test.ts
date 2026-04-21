@@ -73,6 +73,47 @@ describe('articleFrontmatterSchema', () => {
         articleFrontmatterSchema.safeParse({ ...baseValid, type: 'idea' }).success,
       ).toBe(true)
     })
+
+    it('defaults site to true when the field is omitted', () => {
+      const result = articleFrontmatterSchema.parse({
+        title: 'hello',
+        type: 'tech',
+      })
+      expect(result.site).toBe(true)
+    })
+
+    it('accepts site as an explicit boolean', () => {
+      const resultTrue = articleFrontmatterSchema.parse({
+        ...baseValid,
+        site: true,
+      })
+      const resultFalse = articleFrontmatterSchema.parse({
+        ...baseValid,
+        site: false,
+      })
+      expect(resultTrue.site).toBe(true)
+      expect(resultFalse.site).toBe(false)
+    })
+
+    it('accepts optional zenn and qiita flags', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        zenn: true,
+        qiita: false,
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts optional zennSlug and qiitaSlug strings', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        zenn: true,
+        zennSlug: 'my-article',
+        qiita: false,
+        qiitaSlug: 'abcdef0123',
+      })
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('invalid cases', () => {
@@ -147,6 +188,59 @@ describe('articleFrontmatterSchema', () => {
         type: 'blog',
       })
       expect(result.success).toBe(false)
+    })
+
+    it('rejects unknown keys (strict schema)', () => {
+      // S-1 (security-engineer): scripts 側 schema と同様に .strict() で
+      // 未知キーを reject して fail-closed 多層防御の片側を埋める。
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        qiitaPayload: { id: 'abcd' },
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects keys close to known ones (typo guard)', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        // "zenn" のタイポ (意図せず public フラグを off にしてしまう事故の回帰)
+        znen: true,
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a truthy string value for zenn (strict boolean)', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        zenn: 'true',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a truthy string value for qiita (strict boolean)', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        qiita: 'true',
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('default values for multi-channel flags', () => {
+    it('defaults zenn to false when the field is omitted', () => {
+      const result = articleFrontmatterSchema.parse({
+        title: 'hello',
+        type: 'tech',
+      })
+      expect(result.zenn).toBe(false)
+    })
+
+    it('defaults qiita to false when the field is omitted', () => {
+      const result = articleFrontmatterSchema.parse({
+        title: 'hello',
+        type: 'tech',
+      })
+      expect(result.qiita).toBe(false)
     })
   })
 })

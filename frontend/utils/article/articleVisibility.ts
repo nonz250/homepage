@@ -31,6 +31,25 @@ interface VisibilityInput {
 }
 
 /**
+ * `site` フラグが未指定のときに採用するデフォルト値。
+ *
+ * v4 で導入した配信フラグ。未指定時は「旧挙動と同じくサイト側に出す」ため
+ * true に倒す。値が boolean 以外 (文字列等の壊れ frontmatter) でも安全側
+ * (true) に寄せ、UI 側での消失を避ける (fail-safe)。
+ */
+const DEFAULT_SITE_VISIBILITY = true
+
+/**
+ * `zenn` / `qiita` フラグが未指定のときに採用するデフォルト値。
+ *
+ * v4 で導入した配信フラグ。未指定時は「外部配信しない」安全側 (false) に
+ * 倒す。壊れた値 (文字列等) も同様に false に正規化する (fail-closed)。
+ * scripts 側 schema (`scripts/lib/schema/article.ts`) の `.default(false)` と
+ * 揃える意図。
+ */
+const DEFAULT_EXTERNAL_DISTRIBUTION = false
+
+/**
  * `toArticle` が受け入れる入力型。
  *
  * Nuxt Content v3 が返す `ArticlesCollectionItem` には index signature が
@@ -50,6 +69,21 @@ export interface ToArticleInput {
   readonly published?: unknown
   readonly published_at?: unknown
   readonly emoji?: unknown
+  /**
+   * 本サイト配信フラグ (v4)。
+   * 未指定時は {@link DEFAULT_SITE_VISIBILITY} に倒す。
+   */
+  readonly site?: unknown
+  /**
+   * Zenn 配信フラグ (v4)。
+   * 未指定 / 非 boolean 値は {@link DEFAULT_EXTERNAL_DISTRIBUTION} (false) に倒す。
+   */
+  readonly zenn?: unknown
+  /**
+   * Qiita 配信フラグ (v4)。
+   * 未指定 / 非 boolean 値は {@link DEFAULT_EXTERNAL_DISTRIBUTION} (false) に倒す。
+   */
+  readonly qiita?: unknown
 }
 
 /** `type` frontmatter のデフォルト値 */
@@ -84,6 +118,23 @@ export function isArticleVisibleNow(
 }
 
 /**
+ * `site` フラグによるサイト上の可視性判定 (v4)。
+ *
+ * - `site` フィールドが真偽値で存在する場合はその値
+ * - 未指定 (undefined) / 壊れた値 (string 等) の場合は
+ *   {@link DEFAULT_SITE_VISIBILITY} に倒す
+ *
+ * `isArticleVisibleNow` と組み合わせて使う:
+ *   - 記事一覧 (`useArticles`) や RSS (`/feed.xml`) は両方を満たすものだけ出す
+ *   - preview モード時は本判定をスキップする呼び出し側の責務
+ */
+export function isArticleSiteVisible(item: {
+  readonly site?: unknown
+}): boolean {
+  return coerceSiteVisibility(item.site)
+}
+
+/**
  * 未知の値を Article['type'] に正規化する。
  *
  * zod schema で `'tech' | 'idea'` に絞っているが、DB 側から取得する経路では
@@ -106,6 +157,40 @@ function coerceTopics(value: unknown): string[] {
 }
 
 /**
+ * `site` フラグを boolean に正規化する。
+ *
+ * `true` / `false` の明示的な boolean のみ受理し、それ以外 (undefined, 文字列,
+ * 数値など) は {@link DEFAULT_SITE_VISIBILITY} に倒す。
+ *
+ * fail-safe 方針: 壊れた frontmatter で site が誤った型になったとしても、
+ * 既定値 (true) に寄せることで「既存記事が突然消える」事故を避ける。明確に
+ * `site: false` が指定されたときだけ非表示にする。
+ */
+function coerceSiteVisibility(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  return DEFAULT_SITE_VISIBILITY
+}
+
+/**
+ * `zenn` / `qiita` 等の外部配信フラグを boolean に正規化する。
+ *
+ * 明示的な boolean のみ受理し、それ以外 (undefined, 文字列, 数値, null 等) は
+ * {@link DEFAULT_EXTERNAL_DISTRIBUTION} (false) に倒す。
+ *
+ * fail-closed 方針: `site` と異なり、外部配信は「誤って `true` 扱い」された
+ * 場合の事故 (意図しないクロスポスト) のほうが深刻なため、壊れた値は常に
+ * 非配信 (false) に寄せる。scripts 側 schema の `.default(false)` と揃える。
+ */
+function coerceExternalDistribution(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  return DEFAULT_EXTERNAL_DISTRIBUTION
+}
+
+/**
  * Nuxt Content のレコードから UI 向け Article DTO に変換する純関数。
  *
  * `stem` を slug として採用し (Zenn 互換)、UI が扱いやすい形に正規化する。
@@ -124,5 +209,8 @@ export function toArticle(item: ToArticleInput): Article {
     published_at:
       typeof item.published_at === 'string' ? item.published_at : undefined,
     emoji: typeof item.emoji === 'string' ? item.emoji : undefined,
+    site: coerceSiteVisibility(item.site),
+    zenn: coerceExternalDistribution(item.zenn),
+    qiita: coerceExternalDistribution(item.qiita),
   }
 }

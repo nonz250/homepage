@@ -1,6 +1,10 @@
 # ADR: 本サイト限定公開記事の配置方式 (site-articles ディレクトリ)
 
-- **Status**: Accepted
+- **Status**: Superseded by `phase-3-qiita-crosspost.md`
+- **Superseded Date**: 2026-04-21
+- **Reason**: Qiita crosspost 対応に伴い `site-articles/` を唯一の原典とし、
+  `articles/` は Zenn Connect 向け生成物として格下げした。両ディレクトリを
+  同一コレクションとして読む構成は廃止。
 - **Date**: 2026-04-17
 - **Phase**: Phase 1 (MVP Blog)
 - **Scope**: Zenn Connect 非対象の記事を本サイト側でだけ公開する仕組み

@@ -9,6 +9,7 @@
 import { queryCollection } from '#imports'
 import { useContentPreview } from './useContentPreview'
 import {
+  isArticleSiteVisible,
   isArticleVisibleNow,
   toArticle,
   type Article,
@@ -28,7 +29,9 @@ export interface UseArticlesOptions {
  * 記事一覧を取得する。
  *
  * - 既定では `published === true` かつ `published_at <= now()` の記事のみ
- * - `opts.preview` が true なら全件
+ * - v4 で導入した `site` フラグが明示的に `false` の記事は常に除外する
+ *   (default: true なので未指定記事は従来通り表示される)
+ * - `opts.preview` が true なら全件 (下書き・予約投稿・site:false も含む)
  * - `published_at` 降順でソート
  * - `opts.limit` で件数上限を指定可能
  */
@@ -43,7 +46,9 @@ export async function useArticles(
   const now = Date.now()
   const filtered = preview
     ? items
-    : items.filter((item) => isArticleVisibleNow(item, now))
+    : items
+        .filter((item) => isArticleVisibleNow(item, now))
+        .filter((item) => isArticleSiteVisible(item))
 
   const mapped = filtered.map((item) => toArticle(item))
   return typeof opts.limit === 'number' ? mapped.slice(0, opts.limit) : mapped

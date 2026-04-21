@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isArticleSiteVisible,
   isArticleVisibleNow,
   toArticle,
 } from '../../../utils/article/articleVisibility'
@@ -70,6 +71,26 @@ describe('isArticleVisibleNow', () => {
   })
 })
 
+describe('isArticleSiteVisible', () => {
+  it('returns true when site is true', () => {
+    expect(isArticleSiteVisible({ site: true })).toBe(true)
+  })
+
+  it('returns false when site is explicitly false', () => {
+    expect(isArticleSiteVisible({ site: false })).toBe(false)
+  })
+
+  it('returns true (default) when site is missing', () => {
+    expect(isArticleSiteVisible({})).toBe(true)
+  })
+
+  it('returns true (default) when site is non-boolean garbage', () => {
+    expect(isArticleSiteVisible({ site: 'maybe' })).toBe(true)
+    expect(isArticleSiteVisible({ site: 1 })).toBe(true)
+    expect(isArticleSiteVisible({ site: null })).toBe(true)
+  })
+})
+
 describe('toArticle', () => {
   it('maps a minimal content record to an Article', () => {
     const result = toArticle({
@@ -91,7 +112,48 @@ describe('toArticle', () => {
       published: true,
       published_at: '2026-04-01T00:00:00+09:00',
       emoji: '👋',
+      site: true,
+      zenn: false,
+      qiita: false,
     })
+  })
+
+  it('defaults site to true when the field is missing', () => {
+    const result = toArticle({
+      stem: 's',
+      path: '/s',
+      title: 't',
+      type: 'tech',
+      topics: [],
+      published: true,
+    })
+    expect(result.site).toBe(true)
+  })
+
+  it('coerces explicit site:false to boolean false', () => {
+    const result = toArticle({
+      stem: 's',
+      path: '/s',
+      title: 't',
+      type: 'tech',
+      topics: [],
+      published: true,
+      site: false,
+    })
+    expect(result.site).toBe(false)
+  })
+
+  it('defaults site to true when site is non-boolean garbage', () => {
+    const result = toArticle({
+      stem: 's',
+      path: '/s',
+      title: 't',
+      type: 'tech',
+      topics: [],
+      published: true,
+      site: 'maybe' as unknown as boolean,
+    })
+    expect(result.site).toBe(true)
   })
 
   it('falls back to a derived path when path is missing', () => {
