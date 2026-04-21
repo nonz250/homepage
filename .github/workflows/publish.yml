@@ -42,8 +42,11 @@ on:
   push:
     branches:
       - main
-    # v4 パイプライン自身が articles/ と public/ を commit する。両 path は
-    # paths-ignore に入れて push トリガーから除外し、自己ループを防ぐ。
+    # GitHub Actions は同一 event に paths と paths-ignore を併記できない
+    # (workflow file issue で run 自体が起動不能になる)。paths は allowlist
+    # として機能し、ここに列挙されていない articles/ と public/ への push は
+    # 自動的に除外される。これにより auto-commit job の再 push による自己
+    # ループを防ぐ。
     paths:
       - 'site-articles/**'
       - 'scripts/**'
@@ -51,9 +54,6 @@ on:
       - '.github/workflows/publish.yml'
       - 'package.json'
       - 'package-lock.json'
-    paths-ignore:
-      - 'articles/**'
-      - 'public/**'
   workflow_dispatch:
 
 permissions:
