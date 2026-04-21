@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { processMarkdownWith } from '../../../helpers/processMarkdown'
+import { processMarkdownWith, readFixture } from '../../../helpers/processMarkdown'
 import { transformMath } from '../../../../scripts/lib/syntax/transforms/transformMath'
 
 describe('transformMath', () => {
+  it('matches the fixture golden output', () => {
+    const { input, expected } = readFixture('math')
+    const result = processMarkdownWith(input, transformMath)
+    expect(result).toBe(expected)
+  })
+
+
   it('rewrites inline $expr$ to $`expr`$', () => {
     const input = 'インライン数式 $a\\ne0$ を含む。\n'
     const output = processMarkdownWith(input, transformMath)
