@@ -12,16 +12,22 @@ const __dirname = dirname(__filename)
  */
 const REPO_ROOT = resolve(__dirname, '..')
 
-/** Zenn Connect と共有する記事ディレクトリ */
-const ZENN_SHARED_ARTICLES_DIR = resolve(REPO_ROOT, 'articles')
-
 /**
- * 本サイト限定で公開する記事ディレクトリ。
- * Zenn Connect は `articles/` のみを参照するため、ここに置いた記事は
- * 物理的に Zenn には公開されない。詳細は
- * `frontend/docs/decisions/site-only-articles.md` を参照。
+ * 本サイトが読み込む唯一の記事ソースディレクトリ (v4)。
+ *
+ * v3 までは `articles/` (Zenn Connect 共有) と `site-articles/` (本サイト限定)
+ * の 2 箇所を同一コレクションとして読み込んでいたが、v4 で以下の構造に改めた:
+ *
+ *   - `site-articles/*.md`: 唯一の原典。`site/zenn/qiita` の boolean フラグ
+ *     で配信先を制御する
+ *   - `articles/*.md`:      generator (scripts/) が生成する派生物。Zenn Connect
+ *     が読む入力としてのみ存在し、frontend は参照しない
+ *
+ * したがって本ファイルでは `site-articles/` のみを source に指定する。
+ * `articles/` 側の記事は `site: true` のものを原典から zenn ストリンガーで
+ * 出力したもの (byte-parity 保証) であり、frontend が二重に読む必要はない。
  */
-const SITE_ONLY_ARTICLES_DIR = resolve(REPO_ROOT, 'site-articles')
+const ARTICLES_SOURCE_DIR = resolve(REPO_ROOT, 'site-articles')
 
 /** Markdown を収集する glob パターン (サブディレクトリ非対象) */
 const ARTICLE_INCLUDE_GLOB = '**/*.md'
@@ -29,11 +35,9 @@ const ARTICLE_INCLUDE_GLOB = '**/*.md'
 /**
  * Nuxt Content v3 のコレクション定義。
  *
- * - articles: `articles/` (Zenn 共有) と `site-articles/` (本サイト限定) を
- *   同一コレクションとして読み込む。v3 の `source` は `CollectionSource[]` を
- *   受け付けるため、配列で複数ディレクトリを指定する (ADR V-3 参照)。
- * - 両ディレクトリで slug が衝突した場合は build 時に fail させる
- *   (assertNoSlugCollision をビルドステップで呼び出す)。
+ * - articles: `site-articles/` のみを読み込む (v4)。配信先は frontmatter の
+ *   `site/zenn/qiita` フラグで決まる。本サイト向けは `site: true` のものを
+ *   composable (useArticles/useArticle) でさらにフィルタする。
  * - frontmatter のバリデーションは `content/schema/article.ts` に切り出し、
  *   単体テストでも同じ schema を利用して検証する。
  */
@@ -43,11 +47,7 @@ export default defineContentConfig({
       type: 'page',
       source: [
         {
-          cwd: ZENN_SHARED_ARTICLES_DIR,
-          include: ARTICLE_INCLUDE_GLOB,
-        },
-        {
-          cwd: SITE_ONLY_ARTICLES_DIR,
+          cwd: ARTICLES_SOURCE_DIR,
           include: ARTICLE_INCLUDE_GLOB,
         },
       ],
