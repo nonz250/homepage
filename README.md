@@ -2,6 +2,55 @@
 
 個人サイト ([nozomi.bike](https://nozomi.bike)) と Zenn を兼ねるリポジトリ。
 
+## Qiita 連携 (v4 コンテンツパイプライン)
+
+Qiita 側の記事は `public/*.md` として generator (`scripts/generate.ts`) が
+`site-articles/*.md` から**ビルド時に派生生成**する。`public/*.md` を手で
+編集してはいけない (generator 実行時に上書き破棄される)。
+
+### `qiita.config.json` の意味論
+
+| キー | 値 | 意図 |
+| --- | --- | --- |
+| `includePrivate` | `false` | Qiita 側で `private: true` (Qiita 公開範囲の**限定共有**) になった記事を qiita-cli の publish/pull 対象から除外する |
+| `host` / `port` | `localhost` / `8888` | qiita-cli のローカル preview サーバ設定 |
+
+> **重要**: `includePrivate: false` は **Qiita 側 `private` フラグのみを
+> 除外**する。本リポジトリの `site-articles/` 側で `published: false`
+> (Zenn の下書き) にしていても、Qiita 側では `private` とは別概念のため
+> generator/qiita-cli の対象判定に影響しない。下書き漏洩防止は generator
+> 本体 (`published !== true` を reject) と `npm run assert:*` の多層防御で
+> 担保している。
+
+### Qiita sync はローカル開発者のみ
+
+- CI では `qiita pull` / `qiita sync` 相当の **取得系コマンドは実行しない**
+  (publish.yml は publish 系のみ)
+- 必要があればローカル開発者が手動で実行する
+- 実行前に `.gitignore` が以下を無視していることを必ず確認する
+  - `public/.remote/` (qiita-cli のサーバ側キャッシュ)
+  - `/public/<uuid>.md` (Qiita から pull された UUID basename)
+  - ただし `!public/.allowlist` は tracked で残す (allowlist マニフェスト)
+- `public/*.md` は generator 出力のみが git 管理下に入る前提で、CI は
+  `npm run assert:public-allowlist` で basename のホワイトリスト外を
+  `exit 1` で reject する
+
+### CI で実行される fail-closed アサーション
+
+`scripts/` 配下に並んでいる shell/node スクリプト群で、publish 前に多層
+防御をかけている (いずれか 1 つでも fail したらビルド全体を止める):
+
+| スクリプト | 役割 |
+| --- | --- |
+| `assert-frontmatter-size.sh` | `site-articles/*.md` のバイト上限 (256 KiB) |
+| `verify-generated-frontmatter.js` | 生成物 `articles/` `public/` の frontmatter 再 parse |
+| `grep-forbidden-patterns.sh public` | Qiita 側で Zenn 独自記法が消え残りしていないか |
+| `assert-public-allowlist.sh` | `public/*.md` basename が allowlist 内 |
+| `assert-no-qiita-leaked-drafts.sh` | `public/*.md` frontmatter に `private: true` が無い |
+| `assert-no-drafts.sh` | Nuxt `generate` 成果物に `published !== true` の slug/MARKER が残らない |
+| `assert-no-external-images.sh` | 成果物に外部画像 URL が残らない |
+| `assert-security-headers.sh` | nginx 経由のセキュリティヘッダ |
+
 ## 記事の書き分け
 
 記事 Markdown は 2 つのディレクトリに分けて管理している。両者は本サイトでは
