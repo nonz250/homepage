@@ -73,6 +73,47 @@ describe('articleFrontmatterSchema', () => {
         articleFrontmatterSchema.safeParse({ ...baseValid, type: 'idea' }).success,
       ).toBe(true)
     })
+
+    it('defaults site to true when the field is omitted', () => {
+      const result = articleFrontmatterSchema.parse({
+        title: 'hello',
+        type: 'tech',
+      })
+      expect(result.site).toBe(true)
+    })
+
+    it('accepts site as an explicit boolean', () => {
+      const resultTrue = articleFrontmatterSchema.parse({
+        ...baseValid,
+        site: true,
+      })
+      const resultFalse = articleFrontmatterSchema.parse({
+        ...baseValid,
+        site: false,
+      })
+      expect(resultTrue.site).toBe(true)
+      expect(resultFalse.site).toBe(false)
+    })
+
+    it('accepts optional zenn and qiita flags', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        zenn: true,
+        qiita: false,
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts optional zennSlug and qiitaSlug strings', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        zenn: true,
+        zennSlug: 'my-article',
+        qiita: false,
+        qiitaSlug: 'abcdef0123',
+      })
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('invalid cases', () => {
