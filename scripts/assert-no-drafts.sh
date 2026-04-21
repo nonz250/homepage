@@ -36,8 +36,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly SCRIPT_DIR REPO_ROOT
 
-readonly OUTPUT_DIR="${REPO_ROOT}/frontend/.output/public"
-readonly EXTRACT_SCRIPT="${REPO_ROOT}/frontend/scripts/extract-draft-slugs.mjs"
+# OUTPUT_DIR / EXTRACT_SCRIPT は環境変数で上書き可 (テスト用途)。production
+# では未設定のままで、既存の `frontend/.output/public` と
+# `frontend/scripts/extract-draft-slugs.mjs` を参照する。
+OUTPUT_DIR="${ASSERT_NO_DRAFTS_OUTPUT_DIR:-${REPO_ROOT}/frontend/.output/public}"
+EXTRACT_SCRIPT="${ASSERT_NO_DRAFTS_EXTRACT_SCRIPT:-${REPO_ROOT}/frontend/scripts/extract-draft-slugs.mjs}"
+readonly OUTPUT_DIR EXTRACT_SCRIPT
 
 if [[ ! -d "${OUTPUT_DIR}" ]]; then
   echo "assert-no-drafts: output directory not found: ${OUTPUT_DIR}" >&2
@@ -45,13 +49,18 @@ if [[ ! -d "${OUTPUT_DIR}" ]]; then
   exit "${EXIT_LEAKED}"
 fi
 
-if [[ ! -f "${EXTRACT_SCRIPT}" ]]; then
-  echo "assert-no-drafts: helper script not found: ${EXTRACT_SCRIPT}" >&2
-  exit "${EXIT_LEAKED}"
+# DRAFT_SLUGS も環境変数で上書き可 (テスト用途)。未設定なら extract helper
+# を実行する。テストで直接 slug を流し込めば helper スクリプトを経由しない。
+if [[ -z "${ASSERT_NO_DRAFTS_SLUGS_OVERRIDE+x}" ]]; then
+  if [[ ! -f "${EXTRACT_SCRIPT}" ]]; then
+    echo "assert-no-drafts: helper script not found: ${EXTRACT_SCRIPT}" >&2
+    exit "${EXIT_LEAKED}"
+  fi
+  # 下書き slug を取得 (改行区切り、0 件なら空文字)。
+  DRAFT_SLUGS="$(node "${EXTRACT_SCRIPT}")"
+else
+  DRAFT_SLUGS="${ASSERT_NO_DRAFTS_SLUGS_OVERRIDE}"
 fi
-
-# 下書き slug を取得 (改行区切り、0 件なら空文字)。
-DRAFT_SLUGS="$(node "${EXTRACT_SCRIPT}")"
 
 # 走査対象を find で列挙する。
 # 対象が 1 ファイルも無い場合は grep を呼ばずスキップする。
