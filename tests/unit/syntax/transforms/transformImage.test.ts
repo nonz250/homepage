@@ -66,6 +66,38 @@ describe('transformImage', () => {
     ).toThrowError(INVALID_LOCAL_IMAGE_PATH_ERROR_PREFIX)
   })
 
+  it('throws for double slashes under /images/ (redundant separator)', () => {
+    // `/images/foo//bar.png` は IMAGE_PATH_PATTERN を通過するが、
+    // assertSafeImagePath の normalize 検査で reject されるべき。
+    // 二重防御 (regex + path.posix.normalize) が両方連携していないと
+    // 本ケースは素通しされてしまう。
+    const input = '![](/images/foo//bar.png)\n'
+    expect(() =>
+      processMarkdownWithOptions(input, transformImage, baseOptions),
+    ).toThrow()
+  })
+
+  it('throws for single-dot segments under /images/ (non-canonical form)', () => {
+    // `/images/foo/./bar.png` は regex を通過するが normalize で
+    // `/images/foo/bar.png` に縮約される。canonical form でない以上
+    // fail-closed で拒否する。
+    const input = '![](/images/foo/./bar.png)\n'
+    expect(() =>
+      processMarkdownWithOptions(input, transformImage, baseOptions),
+    ).toThrow()
+  })
+
+  it('throws for trailing traversal under /images/ (normalize escape)', () => {
+    // regex の negative lookahead `(?!.*\.\.)` で捕捉されない fallback を
+    // assertSafeImagePath 側でも落とす。ここでは IMAGE_PATH_PATTERN を
+    // 通過する範囲で normalize が別パスに縮約される例として、単独ドット
+    // ディレクトリ経由のバリエーションを検証する。
+    const input = '![](/images/sub/./nested/pic.png)\n'
+    expect(() =>
+      processMarkdownWithOptions(input, transformImage, baseOptions),
+    ).toThrow()
+  })
+
   it('throws when commitSha is an empty string', () => {
     const input = '![](/images/foo.png)\n'
     expect(() =>
