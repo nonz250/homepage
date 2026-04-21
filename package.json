@@ -5,7 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate": "tsx scripts/generate.ts",
+    "verify:generated": "node scripts/verify-generated-frontmatter.js",
+    "assert:public-allowlist": "bash scripts/assert-public-allowlist.sh",
+    "assert:no-qiita-leaked-drafts": "bash scripts/assert-no-qiita-leaked-drafts.sh",
+    "assert:forbidden-patterns": "bash scripts/grep-forbidden-patterns.sh public",
+    "assert:frontmatter-size": "bash scripts/assert-frontmatter-size.sh site-articles"
   },
   "repository": {
     "type": "git",
