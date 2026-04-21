@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 /**
- * 記事ソースディレクトリ (articles/ および site-articles/) の frontmatter を
- * 走査し、下書き (published !== true) の slug を改行区切りで標準出力に
- * 書き出すヘルパー。
+ * 記事ソースディレクトリ (site-articles/) の frontmatter を走査し、
+ * 下書き (published !== true) の slug を改行区切りで標準出力に書き出す
+ * ヘルパー (v4)。
+ *
+ * v3 までは articles/ と site-articles/ の両方を走査していたが、v4 で
+ * 記事の原典は site-articles/ に一本化された。articles/ は generator
+ * (scripts/) が `site: true && zenn: true` の記事のみを出力するため、
+ * `published: false` の記事が articles/ に存在しない前提 (二重防御不要)。
  *
  * ビルド成果物スキャン (scripts/assert-no-drafts.sh) からシェル呼び出しで
  * 利用するため、依存は Node 標準と gray-matter のみに限定している。
@@ -10,7 +15,7 @@
  *
  * 呼び出し方:
  *   node frontend/scripts/extract-draft-slugs.mjs [...dirs]
- *     dirs のデフォルトはリポジトリ root 直下の articles/ と site-articles/。
+ *     dirs のデフォルトはリポジトリ root 直下の site-articles/。
  *     1 つ以上のディレクトリを任意で渡すことができる (複数指定可)。
  *
  * 終了コード:
@@ -67,9 +72,9 @@ function directoryExists(path) {
 
 function resolveDefaultArticlesDirs() {
   const here = dirname(fileURLToPath(import.meta.url))
-  // frontend/scripts -> repo root /articles, /site-articles
+  // frontend/scripts -> repo root /site-articles (v4: 原典は site-articles/ のみ)
   const repoRoot = resolve(here, '../..')
-  return [resolve(repoRoot, 'articles'), resolve(repoRoot, 'site-articles')]
+  return [resolve(repoRoot, 'site-articles')]
 }
 
 function main() {

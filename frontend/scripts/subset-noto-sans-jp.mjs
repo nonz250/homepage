@@ -32,11 +32,14 @@ const FRONTEND_DIR = resolve(__dirname, '..')
 /** リポジトリ root */
 const REPO_ROOT = resolve(FRONTEND_DIR, '..')
 
-/** 記事ディレクトリ (タイトル文字収集用) */
-const ARTICLE_DIRS = [
-  resolve(REPO_ROOT, 'articles'),
-  resolve(REPO_ROOT, 'site-articles'),
-]
+/**
+ * 記事ディレクトリ (タイトル文字収集用) (v4)。
+ *
+ * v4 では原典が site-articles/ に一本化されたため、この 1 箇所だけを走査する。
+ * articles/ は generator の出力 (site-articles/ の部分集合) なので、同一の
+ * タイトル文字しか含まれない → 走査不要。
+ */
+const ARTICLE_DIRS = [resolve(REPO_ROOT, 'site-articles')]
 
 /** ソースフォント (WOFF。Satori が WOFF2 を受け付けないため WOFF 版を採用) */
 const SOURCE_FONT = resolve(
