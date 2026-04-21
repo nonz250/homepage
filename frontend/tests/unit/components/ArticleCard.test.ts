@@ -19,6 +19,9 @@ const baseArticle: Article = {
   published: true,
   published_at: '2026-04-01T00:00:00+09:00',
   emoji: '👋',
+  site: true,
+  zenn: false,
+  qiita: false,
 }
 
 /**
