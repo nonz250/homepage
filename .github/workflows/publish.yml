@@ -7,17 +7,19 @@
 # - generate      : site-articles/*.md から articles/ と public/ を派生生成し、
 #                   fail-closed アサーションを全て通してから成果物を artifact
 #                   として upload する。
-# - qiita-publish : generated artifact を展開し、increments/qiita-cli の公式
-#                   composite action で Qiita に publish する。
-#                   qiita-cli の composite action は内部で public/*.md を
-#                   commit/push するため、QIITA_TOKEN はこの step の env
-#                   スコープにのみ渡す (他 job・他 step には漏らさない)。
-# - auto-commit   : qiita-publish が push した public/*.md を pull --rebase で
-#                   取り込んだ上で、generate job が作った articles/ と残存する
-#                   public/ 差分を [skip ci] 付きで push する。
-#                   GITHUB_TOKEN での push は他ワークフローを起動しない
-#                   (GitHub 仕様) ため、本ワークフロー自身の paths トリガ
-#                   と併せて二重に自己ループを防ぐ。
+# - qiita-publish : generated artifact を展開し、npm install -g 経由の
+#                   qiita-cli を直接叩いて Qiita へ publish する。
+#                   (公式の composite action は内部で `git add ./public/*` を
+#                   実行するが、当リポジトリは .gitignore で UUID basename の
+#                   Qiita 既存記事を除外しているため exit 1 になる。composite
+#                   action は使わず publish コマンドだけを自前で動かす。)
+#                   QIITA_TOKEN は publish step の env スコープにのみ渡す。
+#                   publish 直後に sync で pull された UUID basename と
+#                   public/.remote/ を明示削除し、限定共有記事の漏洩を遮断。
+# - auto-commit   : generate job が作った articles/ と public/ の差分を
+#                   [skip ci] 付きで push する。GITHUB_TOKEN での push は
+#                   他ワークフローを起動しない (GitHub 仕様) ため、本ワーク
+#                   フロー自身の paths トリガと併せて二重に自己ループを防ぐ。
 # - deploy        : rsync + ssh で本番 nginx に静的生成物を配布する。
 #                   deploy.yml はバックアップ (workflow_dispatch) として残す。
 #
@@ -33,8 +35,9 @@
 #     actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020       # v4
 #     actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
 #     actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-#     increments/qiita-cli/actions/publish@3d1289cc1b48fd3d6cd4c7e5dde9745292997046 # v1.8.0
 #     webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd     # v0.9.1
+#
+#   qiita-cli は npm install -g @qiita/qiita-cli@1.8.0 で固定バージョン導入。
 
 name: Publish articles
 
@@ -146,11 +149,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        # qiita-cli の composite action が git push するため、書き込める
-        # checkout が必要。token は default の GITHUB_TOKEN をそのまま使う。
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.x'
 
       - name: Download generated artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -158,14 +164,28 @@ jobs:
           name: generated
           path: .
 
+      - name: Install qiita-cli
+        # 公式 composite action (increments/qiita-cli/actions/publish) は最後に
+        # `git add ./public/*` を実行するが、当リポジトリは .gitignore で
+        # `/public/[a-f0-9]*.md` (Qiita 上の既存記事の UUID basename) を除外し
+        # ているため、composite action の git add が exit 1 になる。
+        # composite action 内部の publish コマンドだけを直接実行する。
+        run: npm install -g @qiita/qiita-cli@1.8.0
+
       - name: Publish articles to Qiita
-        # 公式 composite action。内部で qiita publish --all を実行したのち、
-        # public/*.md を commit して push する。QIITA_TOKEN は**この step の
-        # with 経由のみ**で渡し、他 step の env には一切漏らさない。
-        uses: increments/qiita-cli/actions/publish@3d1289cc1b48fd3d6cd4c7e5dde9745292997046 # v1.8.0
-        with:
-          qiita-token: ${{ secrets.QIITA_TOKEN }}
-          root: "."
+        # QIITA_TOKEN は本 step の env に限定。他 step には漏らさない。
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+        run: qiita publish --all --root .
+
+      - name: Remove synced UUID drafts and remote cache
+        # qiita publish は内部で sync-articles-from-qiita を走らせ、Qiita 上の
+        # 既存記事 (限定共有含む可能性あり) を `public/<uuid>.md` に pull する。
+        # 限定共有記事の漏洩を防ぐため、UUID basename と public/.remote/ を
+        # auto-commit 前に必ず削除する (.gitignore + この削除で二重防御)。
+        run: |
+          find public -maxdepth 1 -type f -regextype posix-extended -regex '.*/[a-f0-9]+\.md$' -print -delete || true
+          rm -rf public/.remote
 
   auto-commit:
     name: Commit generated articles diff back to main
@@ -187,10 +207,10 @@ jobs:
           name: generated
           path: .
 
-      - name: Pull latest (incorporate qiita-cli push)
-        # qiita-publish job 内の composite action が public/*.md を push する
-        # ため、auto-commit は pull --rebase で最新を取り込んでから差分を
-        # 積む。rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
+      - name: Pull latest (defensive rebase)
+        # qiita-publish は自前実行に切り替えたので push は行わないが、並列
+        # push (人手コミット等) が来ても衝突しないよう保険として rebase する。
+        # rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
         run: git pull --rebase origin "${GITHUB_REF_NAME}"
 
       - name: Configure git identity
