@@ -51,21 +51,44 @@ Qiita 側の記事は `public/*.md` として generator (`scripts/generate.ts`) 
 | `assert-no-external-images.sh` | 成果物に外部画像 URL が残らない |
 | `assert-security-headers.sh` | nginx 経由のセキュリティヘッダ |
 
-## 記事の書き分け
+## 記事の書き分け (v4 単一原典モデル)
 
-記事 Markdown は 2 つのディレクトリに分けて管理している。両者は本サイトでは
-同じ `articles` コレクションに統合され、URL はどちらも `/articles/[slug]`
-の形になる。Zenn Connect が見に行くのは `articles/` のみなので、Zenn に
-公開したくない記事は `site-articles/` に置くこと。
+記事の原典は `site-articles/*.md` の **1 箇所のみ**。配信先は frontmatter の
+`site` / `zenn` / `qiita` 真偽フラグで制御し、`articles/` と `public/` は
+generator (`scripts/generate.ts`) が派生生成する成果物である (Zenn Connect と
+`qiita-cli` の仕様上、物理ファイル配置が必須なので git 追跡する)。
 
-| 置き場所 | Zenn に公開される? | 典型的な用途 |
+### 配信フラグ
+
+| フラグ | デフォルト | 効果 |
 | --- | --- | --- |
-| `articles/*.md` | される (Zenn Connect 共有) | 技術記事・雑記など広く公開したいもの |
-| `site-articles/*.md` | されない (本サイト限定) | 内輪向け運用メモ・サイト自身の説明など |
+| `site` | `true` | 本サイト (`nozomi.bike`) に公開 |
+| `zenn` | `false` | Zenn Connect 向けに `articles/<zennSlug>.md` を生成 |
+| `qiita` | `false` | Qiita 向けに `public/<qiitaSlug>.md` を生成 |
 
-- ファイル名 (拡張子なし) がそのまま slug になる。
-- 両ディレクトリで同じ slug を使うと **ビルドが失敗する**。衝突を避けること。
-- 詳細な設計根拠は ADR `frontend/docs/decisions/site-only-articles.md` を参照。
+- `site` / `zenn` / `qiita` のいずれも `true` でない記事は受理されない
+  (配信先なしの記事は定義不可)。
+- `zenn: true` のとき `zennSlug` (Zenn の slug 形式) が必須。
+- `qiita: true` のとき `qiitaSlug` (Qiita の basename) が必須。
+- `published: false` の記事はいずれの配信先にも出力されない (下書き)。
+- 型は `zod.strict()` + `z.boolean()` で fail-closed。`"true"` のような
+  truthy 文字列は **reject される**。
+
+### 各ディレクトリの役割
+
+| パス | 役割 | 手動編集 |
+| --- | --- | --- |
+| `site-articles/*.md` | 唯一の原典 | **ここだけ編集する** |
+| `articles/*.md` | Zenn Connect が読む派生物 | 禁止 (generator が上書き) |
+| `public/*.md` | qiita-cli が読む派生物 | 禁止 (generator が上書き) |
+
+- 原典のファイル名 (拡張子なし) はサイト側 URL (`/articles/[slug]`) の
+  slug として使われる。Zenn / Qiita 側の basename は `zennSlug` /
+  `qiitaSlug` で独立に指定する (Zenn は過去に公開した slug を保持できる)。
+- `zennSlug` 同士 / `qiitaSlug` 同士で衝突すると **ビルドが失敗する**。
+- 詳細な設計根拠は ADR
+  `frontend/docs/decisions/phase-3-qiita-crosspost.md` を参照
+  (旧 `site-only-articles.md` は Superseded)。
 
 ## サポートしている Zenn 記法 (Phase 2 時点)
 
