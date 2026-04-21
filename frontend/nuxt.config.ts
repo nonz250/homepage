@@ -51,12 +51,10 @@ const isContentPreviewEnabled = isPreviewEnv && !isProductionBuild
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// リポジトリ root 直下の記事ソースディレクトリ。
-// articles/ は Zenn Connect と共有するディレクトリ (ADR V-1/V-2)。
-// site-articles/ は本サイト限定で公開する記事を置くディレクトリ
-// (ADR `site-only-articles.md`)。両者は同一 `articles` コレクションとして
-// 読み込み、URL は `/articles/[slug]` に統一する。
-const ARTICLES_DIR = resolve(__dirname, '../articles')
+// リポジトリ root 直下の記事ソースディレクトリ (v4)。
+// v3 まで参照していた articles/ は generator の出力 (scripts/) になり、
+// frontend は原典である site-articles/ のみを読み込む。`articles/` 側は
+// Zenn Connect の入力として残るが、本サイトのビルドでは使わない。
 const SITE_ARTICLES_DIR = resolve(__dirname, '../site-articles')
 // Zenn CLI (`npx zenn preview`) は `/images/*` を repo root 直下の `images/`
 // から配信する仕様。articles/ と site-articles/ の双方で同じパス記法
@@ -65,10 +63,13 @@ const SITE_ARTICLES_DIR = resolve(__dirname, '../site-articles')
 const ARTICLES_IMAGES_DIR = resolve(__dirname, '../images')
 
 /**
- * 記事 slug 衝突検知の対象ディレクトリ一覧。
- * 配列末尾に新しいソースを追加することで、build 時のガード対象を広げられる。
+ * 記事 slug 衝突検知の対象ディレクトリ一覧 (v4)。
+ * v4 では source が単一ディレクトリ (site-articles/) に統一されたため、
+ * 異ディレクトリ間の衝突は起こらない。純関数 API を維持しつつ単一要素で
+ * 呼び出す (slugs が OS 側で重複することは FS の仕様上起こり得ないので
+ * 実質 no-op の安全網として残す)。
  */
-const ARTICLE_SOURCE_DIRS = [ARTICLES_DIR, SITE_ARTICLES_DIR] as const
+const ARTICLE_SOURCE_DIRS = [SITE_ARTICLES_DIR] as const
 
 // 自作 remark プラグイン (Zenn 互換画像パス書き換え) の絶対パス。
 // @nuxtjs/mdc が生成する `mdc-imports.mjs` は `src` が指定されていれば
