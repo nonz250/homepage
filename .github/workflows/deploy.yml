@@ -1,8 +1,14 @@
-name: Deploy homepage
+name: Deploy homepage (manual backup)
+
+# v4 の標準経路では publish.yml の deploy job が main push を起点に deploy
+# まで完走する。このワークフローは publish.yml パイプライン全体が deploy
+# 前で停止した場合の **手動バックアップ** として残す。
+#
+# 通常経路 (main push) では起動しないよう workflow_dispatch 専用にする。
+# 必要になったら GitHub UI の "Run workflow" から手動トリガーする。
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
