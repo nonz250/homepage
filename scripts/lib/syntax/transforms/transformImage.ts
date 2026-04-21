@@ -6,6 +6,7 @@ import {
   IMAGE_PATH_PATTERN,
   RAW_GITHUBUSERCONTENT_HOST,
 } from '../../constants'
+import { assertSafeImagePath } from '../../image-path-validator'
 
 /**
  * 記事中の `/images/foo.png` 参照を `raw.githubusercontent.com` 経由の
@@ -18,8 +19,10 @@ import {
  *     URL に書き換えて参照させる。
  *
  * 契約:
- *   - 入力 `/images/<path>.ext` は `IMAGE_PATH_PATTERN` に合致する必要がある。
- *     path traversal (`..`) やディスアロード拡張子は reject (throw)。
+ *   - 入力 `/images/<path>.ext` は `IMAGE_PATH_PATTERN` に合致し、さらに
+ *     `assertSafeImagePath` の canonical form 検査 (posix.normalize 同一性
+ *     および禁止部分文字列) もパスする必要がある。いずれか 1 つでも違反が
+ *     あれば reject (throw) する二段防御。
  *   - 出力 URL:
  *     `https://<RAW_HOST>/<owner>/<repo>/<sha>/images/<path>.ext`
  *   - commit SHA は **純関数の引数** として受け取る (I/O 混入禁止)。
@@ -90,6 +93,11 @@ export function transformImage(
     if (!IMAGE_PATH_PATTERN.test(url)) {
       throw new Error(`${INVALID_LOCAL_IMAGE_PATH_ERROR_PREFIX} ${url}`)
     }
+    // 二段防御: regex 通過後に posix.normalize / 禁止部分文字列の検査を
+    // 独立経路で行い、どちらか一方でも違反を検出すれば throw する。
+    // assertSafeImagePath が throw した場合は上位で fail-closed で止める
+    // ことが目的のため、ここでは捕捉しない。
+    assertSafeImagePath(url)
     node.url = buildRawImageUrl(owner, repo, sha, url)
   })
 }
