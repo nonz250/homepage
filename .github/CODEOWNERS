@@ -1,0 +1,28 @@
+# CODEOWNERS for nonz250/homepage
+#
+# 各パスに対して必須レビュワーを指定する。branch protection の
+# "Require review from Code Owners" を有効化することで、以下のパス変更は
+# @nonz250 の承認なしに main へ merge できなくなる。
+#
+# 指定対象は「下書き漏洩 / generator 改ざん / 外部 publish 設定」など、
+# secret 到達や記事漏洩の経路になりうる sensitive paths に絞る。
+
+# 記事コンテンツパイプラインの実装本体 (generator / 純関数ライブラリ)。
+/scripts/                   @nonz250
+
+# frontend 側のプリレンダリング補助群。build 時の filter や remark hook を
+# 直接いじるため、下書き漏洩や CSP 破壊につながる変更が入りやすい。
+/frontend/utils/prerender/  @nonz250
+
+# remark / rehype 系の変換ロジック (ファイル名に `remark` を含む全て)。
+/frontend/**/*remark*.ts    @nonz250
+
+# Nuxt Content の source 設定 / content collection 定義。
+/frontend/content/          @nonz250
+
+# generator が出力する Qiita 向け記事。手動編集は禁止だが、CODEOWNERS で
+# 「誤って commit された手編集」を人のレビューで検知する多層防御。
+/public/                    @nonz250
+
+# CI / GitHub 設定全般 (workflow / CODEOWNERS 自体 / dependabot 等)。
+/.github/                   @nonz250
