@@ -126,12 +126,34 @@ if [[ -n "${DRAFT_SLUGS}" ]]; then
 
     # 2. 本文に /articles/${slug} というリンクが残っていないか
     #    (一覧ページの下書きリンク漏れを検知する)。
-    if tr '\n' '\0' <"${TARGETS_FILE}" | xargs -0 grep -l -F -- "/articles/${slug}" >/tmp/assert-no-drafts.slug.out 2>/dev/null; then
+    #
+    #    slug の substring マッチによる偽陽性を防ぐため、後続に明確な境界文字
+    #    のみ許容する。例えば slug が `2026-04-19-ai-rotom` のとき
+    #    `/articles/2026-04-19-ai-rotom-tech/` のような別 slug を誤検知しない
+    #    ようにする。許容境界:
+    #      /   : パス区切り (通常ケース)
+    #      "   : HTML 属性値の終端 (href="..." など)
+    #      '   : HTML 属性値の終端 (シングルクォート)
+    #      <   : HTML タグの開始 (<a href=...> の直後など)
+    #      \   : JSON のエスケープ ("link":"/articles/slug\u002ejson" 等)
+    #      .   : 拡張子境界 (/articles/slug.html など)
+    #      ?   : クエリ文字列の開始 (/articles/slug?foo=bar)
+    #      #   : アンカーの開始 (/articles/slug#section)
+    #      ) ] : markdown/HTML の括弧 (念のため)
+    #      \s  : 改行/空白 (行末参照)
+    #      $   : 行末
+    #
+    #    grep -E (ERE) で slug を固定文字列化するため、事前に正規表現メタ
+    #    文字をエスケープする。slug は [a-z0-9-]+ を想定しているが、将来の
+    #    変更に備えて fail-safe にエスケープしておく。
+    escaped_slug="$(printf '%s' "${slug}" | sed -e 's/[][\/.^$*+?(){}|]/\\&/g')"
+    slug_boundary_pattern="/articles/${escaped_slug}(/|\"|'|<|>|\\\\|\.|\?|#|\)|\]|[[:space:]]|$)"
+    if tr '\n' '\0' <"${TARGETS_FILE}" | xargs -0 grep -l -E -- "${slug_boundary_pattern}" >/tmp/assert-no-drafts.slug.out 2>/dev/null; then
       if [[ -s /tmp/assert-no-drafts.slug.out ]]; then
         echo "assert-no-drafts: draft slug '${slug}' referenced inside build output:" >&2
         while IFS= read -r file; do
           echo "  - ${file}" >&2
-          grep -n -F -- "/articles/${slug}" "${file}" | head -n 3 >&2 || true
+          grep -n -E -- "${slug_boundary_pattern}" "${file}" | head -n 3 >&2 || true
         done </tmp/assert-no-drafts.slug.out
         leaked=1
       fi
