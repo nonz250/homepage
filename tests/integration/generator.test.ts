@@ -9,7 +9,6 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { createHash } from 'node:crypto'
 import { runGenerator } from '../../scripts/lib/generatePipeline'
 import { fixedClock } from '../../scripts/lib/clock'
 
@@ -17,12 +16,16 @@ import { fixedClock } from '../../scripts/lib/clock'
  * generator の統合テスト。
  *
  * 検証項目:
- *   - fixture site-articles/ai-rotom-tech.md を入力し、articles/nonz250-ai-rotom.md
- *     がリポジトリ現行と **sha256 byte 一致** で生成される
  *   - 2 回連続実行で diff が無い (冪等性)
  *   - qiita: false のため public/<slug>.md は生成されない
  *   - 未来日の記事 (fixture の published_at に合わせて clock を過去にする)
  *     では public を削除する挙動
+ *   - qiita: true / published: true / 過去日で ignorePublish: false、@[card] や
+ *     画像 URL の変換が掛かること (設計 D-6)
+ *
+ * 記事本文と一致する byte-parity snapshot は廃止。stringifier の出力形式回帰は
+ * `tests/unit/frontmatter/zennStringifier.test.ts` の合成 fixture テストで
+ * カバー済み。
  */
 describe('generator (integration)', () => {
   /**
@@ -46,27 +49,6 @@ describe('generator (integration)', () => {
 
   const clockBefore = fixedClock('2026-04-19T11:59:00Z') // 未来 (JST 21:00 の直前)
   const clockAfter = fixedClock('2026-04-19T13:00:00Z') // 過去 (JST 22:00)
-
-  it('produces byte-parity output with the canonical article (future published_at)', () => {
-    const work = prepareWorkspace()
-    runGenerator({
-      rootDir: work,
-      commitSha: 'dummy-sha',
-      clock: clockAfter,
-    })
-    const generated = readFileSync(
-      join(work, 'articles', 'nonz250-ai-rotom.md'),
-      'utf8',
-    )
-    const expected = readFileSync(
-      resolve(__dirname, '../fixtures/articles/nonz250-ai-rotom.md.expected'),
-      'utf8',
-    )
-    expect(generated).toBe(expected)
-    const generatedHash = createHash('sha256').update(generated).digest('hex')
-    const expectedHash = createHash('sha256').update(expected).digest('hex')
-    expect(generatedHash).toBe(expectedHash)
-  })
 
   it('is idempotent: running twice produces the same files', () => {
     const work = prepareWorkspace()

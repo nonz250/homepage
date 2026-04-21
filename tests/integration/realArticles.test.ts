@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -9,21 +8,27 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { createHash } from 'node:crypto'
 import { runGenerator } from '../../scripts/lib/generatePipeline'
 import { fixedClock } from '../../scripts/lib/clock'
 import { readArticleFile } from '../../scripts/lib/io/readArticleFile'
 
 /**
- * 実リポジトリの `site-articles/` と `articles/` を入力にした byte-parity
- * 検証テスト。PR-C での「既存記事移行」が完了した時点で以下を保証する:
+ * 実リポジトリの `site-articles/` を入力にした generator の動的整合性テスト。
  *
- *   1. 本番 `site-articles/` (tech + essay の 2 ファイル) を generator に
- *      流しても、現行 `articles/nonz250-ai-rotom.md` と byte 一致する
- *      出力が得られること (Zenn 公開済み記事の content 保護)
- *   2. tech 編 / essay 編の両方が v4 schema を通ること (schema drift 検知)
- *   3. 冪等性: 同じ入力で 2 回 generator を走らせても出力 byte が不変
- *   4. `public/` には `.allowlist` 以外が生成されないこと (qiita: false)
+ * 本 suite では以下の回帰防止に限定する:
+ *   1. 現行 `site-articles/*.md` すべてが v4 schema を throw なしで通す
+ *      (schema drift 検知)
+ *   2. generator の **冪等性**: 同じ入力・同じ clock で 2 回実行しても
+ *      articles/ 成果物の byte が変わらないこと
+ *   3. `published: false` の下書き (essay 編) は articles/ に出力されない
+ *   4. `qiita: true` の記事がない間は `public/` に `.allowlist` 以外が
+ *      生成されない
+ *
+ * 記事本文・frontmatter の sha256 pin は敢えて設けない。記事は動的コンテンツ
+ * であり、本文や `published_at` の更新は通常運用として許容される。
+ * stringifier の出力形式回帰は `tests/unit/frontmatter/zennStringifier.test.ts`
+ * で合成 fixture を使ってカバー済み。既公開記事の誤爆編集は CODEOWNERS +
+ * branch protection の運用で担保する。
  *
  * 実リポジトリを汚さないため、入力ファイルは `mkdtempSync` で作った
  * tmp ワークスペースへ `cpSync` でコピーし、generator の出力先も tmp
@@ -59,26 +64,6 @@ const SITE_ESSAY_FILENAME = '2026-04-19-ai-rotom.md'
 const ZENN_ARTICLE_BASENAME = 'nonz250-ai-rotom.md'
 
 /**
- * 公開済み Zenn 記事 `articles/nonz250-ai-rotom.md` の canonical sha256。
- *
- * P0-2 (code-reviewer): "生成物の sha256" と "fixture の sha256" の
- * **両方** を比較しているだけでは、両者が同時に汚染されたときに検知
- * できない。ここで **定数として埋め込む** ことで、Zenn に配信済みの
- * 本文が知らぬ間に書き換わる状況を独立アサーションで落とす。
- *
- * 本値を更新するのは「Zenn 側で既に公開してしまった記事の本文を意図的に
- * 書き換えたい」ときのみ。その場合は PR に該当 issue / コミット履歴を
- * 明示し、reviewer と合意したうえで更新する。
- */
-const CANONICAL_AI_ROTOM_SHA256 =
-  'a8e817c0972f253c8128ddb430a5c68b50dd3faf5245c324daa3f65680b1e861'
-
-/**
- * 期待値 fixture (`tests/fixtures/articles/<basename>.expected`) の basename。
- */
-const ZENN_ARTICLE_EXPECTED_FIXTURE_BASENAME = 'nonz250-ai-rotom.md.expected'
-
-/**
  * 実リポジトリの `site-articles/` 全ファイルを tmp ディレクトリへ複製した
  * 上で、output 用の articles/ および public/ を空で用意したワークスペース
  * を返す。
@@ -95,46 +80,7 @@ function prepareWorkspaceFromRealSiteArticles(): string {
   return work
 }
 
-/**
- * 指定パスの内容から sha256 hex digest を返す。
- */
-function sha256OfFile(filePath: string): string {
-  const content = readFileSync(filePath)
-  return createHash('sha256').update(content).digest('hex')
-}
-
 describe('real-articles generator integration', () => {
-  it('regenerates the canonical articles/<slug>.md with byte parity from real site-articles/', () => {
-    const work = prepareWorkspaceFromRealSiteArticles()
-    runGenerator({
-      rootDir: work,
-      commitSha: 'dummy-sha',
-      clock: CLOCK_AFTER,
-    })
-    const generatedPath = join(work, 'articles', ZENN_ARTICLE_BASENAME)
-    const canonicalPath = join(REPO_ROOT, 'articles', ZENN_ARTICLE_BASENAME)
-    expect(existsSync(generatedPath)).toBe(true)
-    const generated = readFileSync(generatedPath, 'utf8')
-    const canonical = readFileSync(canonicalPath, 'utf8')
-    expect(generated).toBe(canonical)
-    expect(sha256OfFile(generatedPath)).toBe(sha256OfFile(canonicalPath))
-  })
-
-  it('pins canonical articles/<slug>.md and its test fixture to the immutable sha256', () => {
-    // P0-2: "生成物 === fixture" だけでは両者同時汚染を検知できないため、
-    // 本文ハッシュを定数に固定して独立アサーションを挿す。
-    const canonicalPath = join(REPO_ROOT, 'articles', ZENN_ARTICLE_BASENAME)
-    const fixturePath = join(
-      REPO_ROOT,
-      'tests',
-      'fixtures',
-      'articles',
-      ZENN_ARTICLE_EXPECTED_FIXTURE_BASENAME,
-    )
-    expect(sha256OfFile(canonicalPath)).toBe(CANONICAL_AI_ROTOM_SHA256)
-    expect(sha256OfFile(fixturePath)).toBe(CANONICAL_AI_ROTOM_SHA256)
-  })
-
   it('parses every real site-articles/*.md against the v4 schema without error', () => {
     const siteDir = join(REPO_ROOT, 'site-articles')
     const files = readdirSync(siteDir).filter(
