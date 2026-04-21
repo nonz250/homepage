@@ -13,7 +13,10 @@ import type { QiitaFrontmatter } from './toQiitaFrontmatter'
  *     slide → ignorePublish` で固定しているため、本 stringifier も同じ順で
  *     書き出す (js-yaml で dump する辞書の挿入順に従う性質を利用)。
  *   - Zenn 側と違い byte-parity は要求しない。Qiita CLI が読める形 = 必要十分。
- *   - ignorePublish: true を強制。false が渡されたら fail-closed で throw。
+ *   - ignorePublish は true / false いずれも許容する (二段防御の最終判定は
+ *     `toQiitaFrontmatter.resolveIgnorePublish` が行う)。本 stringifier では
+ *     **bool であること**のみを fail-closed で検査し、未定義 / string / null
+ *     など想定外の型が渡されたら throw する。
  */
 
 /**
@@ -37,9 +40,9 @@ const QIITA_KEY_ORDER: ReadonlyArray<keyof QiitaFrontmatter> = [
  * と `sortKeys: false` (挿入順維持) を使い、挿入順をキー order に従わせる。
  */
 export function stringifyQiitaFrontmatter(fm: QiitaFrontmatter): string {
-  if (fm.ignorePublish !== true) {
+  if (typeof fm.ignorePublish !== 'boolean') {
     throw new Error(
-      '[qiitaStringifier] ignorePublish must be true for public/*.md output (fail-closed)',
+      '[qiitaStringifier] ignorePublish must be a boolean for public/*.md output (fail-closed)',
     )
   }
   const ordered: Record<string, unknown> = {}

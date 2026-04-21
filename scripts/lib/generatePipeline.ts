@@ -227,7 +227,10 @@ export function runGenerator(options: GeneratorOptions): GeneratorResult {
         continue
       }
       const merge = readExistingQiitaMerge(qiitaPath)
-      const qiitaFm = toQiitaFrontmatter(frontmatter, merge)
+      // ignorePublish の最終判定は toQiitaFrontmatter に集約する (設計 D-6)。
+      // clock を渡すことで「qiita:true かつ published:true かつ過去日」の
+      // 条件下でのみ false に上書きされる。
+      const qiitaFm = toQiitaFrontmatter(frontmatter, merge, clock)
       const transformedBody = options.skipImageUrlRewrite
         ? body
         : applyQiitaPipeline(body, {
@@ -238,7 +241,7 @@ export function runGenerator(options: GeneratorOptions): GeneratorResult {
         title: qiitaFm.title,
         tags: qiitaFm.tags,
         private: qiitaFm.private ? 'true' : 'false',
-        ignorePublish: 'true',
+        ignorePublish: qiitaFm.ignorePublish ? 'true' : 'false',
       })
       qiitaOutputs.push(qiitaPath)
       continue

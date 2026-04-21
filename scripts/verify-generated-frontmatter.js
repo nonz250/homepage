@@ -10,7 +10,10 @@
  *       * "published" が "true" または "false" 文字列であること (FAILSAFE parse)
  *       * "published_at" が 3 形式のいずれかに match すること (regex)
  *   - public/*.md:
- *       * "ignorePublish" が "true" であること (qiita 限定共有状態)
+ *       * "ignorePublish" が "true" または "false" 文字列であること
+ *         (設計 D-6: 二段防御の最終判定値が bool リテラルで書き出されている
+ *          ことを担保。"yes"/"y"/"1" などの truthy 文字列は FAILSAFE 解釈で
+ *          通らない運用に揃える)
  *       * "private" が "true" または "false" 文字列であること
  *
  * 1 ファイルでも違反があれば process.exit(1) で CI を fail させる。
@@ -109,9 +112,9 @@ function verifyZennArticle(filePath, fm, failures) {
  * public/*.md の検証。
  */
 function verifyQiitaArticle(filePath, fm, failures) {
-  if (fm.ignorePublish !== 'true') {
+  if (fm.ignorePublish !== 'true' && fm.ignorePublish !== 'false') {
     failures.push(
-      `${filePath}: "ignorePublish" must be "true" (got ${JSON.stringify(fm.ignorePublish)})`,
+      `${filePath}: "ignorePublish" must be "true"/"false" (got ${JSON.stringify(fm.ignorePublish)})`,
     )
   }
   if (fm.private !== 'true' && fm.private !== 'false') {

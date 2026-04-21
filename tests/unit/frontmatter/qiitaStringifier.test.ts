@@ -82,9 +82,30 @@ describe('stringifyQiitaFrontmatter', () => {
     expect(result).toContain('tags: []')
   })
 
-  it('fails closed when ignorePublish is not true', () => {
+  it('accepts ignorePublish=false when the upstream pipeline decided to publish', () => {
+    const result = stringifyQiitaFrontmatter({
+      ...baseValid,
+      ignorePublish: false,
+    })
+    expect(result).toContain('ignorePublish: false')
+  })
+
+  it('fails closed when ignorePublish is not a boolean (undefined, string, null)', () => {
+    // @ts-expect-error 契約違反 (bool 以外) を渡した場合のランタイム fail-closed
+    expect(() => stringifyQiitaFrontmatter({ ...baseValid, ignorePublish: undefined })).toThrow()
     expect(() =>
-      stringifyQiitaFrontmatter({ ...baseValid, ignorePublish: false }),
+      stringifyQiitaFrontmatter({
+        ...baseValid,
+        // @ts-expect-error string 型は契約違反
+        ignorePublish: 'true',
+      }),
+    ).toThrow()
+    expect(() =>
+      stringifyQiitaFrontmatter({
+        ...baseValid,
+        // @ts-expect-error null 型は契約違反
+        ignorePublish: null,
+      }),
     ).toThrow()
   })
 })
