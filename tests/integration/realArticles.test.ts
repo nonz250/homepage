@@ -59,6 +59,26 @@ const SITE_ESSAY_FILENAME = '2026-04-19-ai-rotom.md'
 const ZENN_ARTICLE_BASENAME = 'nonz250-ai-rotom.md'
 
 /**
+ * 公開済み Zenn 記事 `articles/nonz250-ai-rotom.md` の canonical sha256。
+ *
+ * P0-2 (code-reviewer): "生成物の sha256" と "fixture の sha256" の
+ * **両方** を比較しているだけでは、両者が同時に汚染されたときに検知
+ * できない。ここで **定数として埋め込む** ことで、Zenn に配信済みの
+ * 本文が知らぬ間に書き換わる状況を独立アサーションで落とす。
+ *
+ * 本値を更新するのは「Zenn 側で既に公開してしまった記事の本文を意図的に
+ * 書き換えたい」ときのみ。その場合は PR に該当 issue / コミット履歴を
+ * 明示し、reviewer と合意したうえで更新する。
+ */
+const CANONICAL_AI_ROTOM_SHA256 =
+  'a8e817c0972f253c8128ddb430a5c68b50dd3faf5245c324daa3f65680b1e861'
+
+/**
+ * 期待値 fixture (`tests/fixtures/articles/<basename>.expected`) の basename。
+ */
+const ZENN_ARTICLE_EXPECTED_FIXTURE_BASENAME = 'nonz250-ai-rotom.md.expected'
+
+/**
  * 実リポジトリの `site-articles/` 全ファイルを tmp ディレクトリへ複製した
  * 上で、output 用の articles/ および public/ を空で用意したワークスペース
  * を返す。
@@ -98,6 +118,21 @@ describe('real-articles generator integration', () => {
     const canonical = readFileSync(canonicalPath, 'utf8')
     expect(generated).toBe(canonical)
     expect(sha256OfFile(generatedPath)).toBe(sha256OfFile(canonicalPath))
+  })
+
+  it('pins canonical articles/<slug>.md and its test fixture to the immutable sha256', () => {
+    // P0-2: "生成物 === fixture" だけでは両者同時汚染を検知できないため、
+    // 本文ハッシュを定数に固定して独立アサーションを挿す。
+    const canonicalPath = join(REPO_ROOT, 'articles', ZENN_ARTICLE_BASENAME)
+    const fixturePath = join(
+      REPO_ROOT,
+      'tests',
+      'fixtures',
+      'articles',
+      ZENN_ARTICLE_EXPECTED_FIXTURE_BASENAME,
+    )
+    expect(sha256OfFile(canonicalPath)).toBe(CANONICAL_AI_ROTOM_SHA256)
+    expect(sha256OfFile(fixturePath)).toBe(CANONICAL_AI_ROTOM_SHA256)
   })
 
   it('parses every real site-articles/*.md against the v4 schema without error', () => {
