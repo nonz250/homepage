@@ -4,7 +4,7 @@ emoji: "🤖"
 type: "tech"
 topics: ["ai", "mcp", "typescript", "pokemon"]
 published: true
-published_at: '2026-04-22 09:00'
+published_at: '2026-04-19 21:00'
 site: true
 zenn: true
 zennSlug: 'nonz250-ai-rotom'
