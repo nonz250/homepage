@@ -83,11 +83,14 @@ describe('toQiitaFrontmatter', () => {
     expect(result.updated_at).toBe('2026-04-19T10:00:00+09:00')
   })
 
-  it('does not introduce optional keys when existing is empty', () => {
+  it('fills required qiita keys with defaults when existing is empty (qiita-cli v0.5.0+ compliance)', () => {
+    // qiita-cli v0.5.0 以降は updated_at / id / organization_url_name / slide
+    // を必須バリデートする。merge 元が無くても空文字列 / false で埋めないと
+    // qiita preview と publish が validation エラーで落ちる。
     const result = toQiitaFrontmatter(base, {}, clockAfterBase)
-    expect('id' in result).toBe(false)
-    expect('organization_url_name' in result).toBe(false)
-    expect('slide' in result).toBe(false)
-    expect('updated_at' in result).toBe(false)
+    expect(result.id).toBe('')
+    expect(result.organization_url_name).toBe('')
+    expect(result.slide).toBe(false)
+    expect(result.updated_at).toBe('')
   })
 })

@@ -4,10 +4,12 @@ emoji: "🤖"
 type: "tech"
 topics: ["ai", "mcp", "typescript", "pokemon"]
 published: true
-published_at: '2026-04-19 21:00'
+published_at: '2026-04-23 21:00'
 site: true
 zenn: true
 zennSlug: 'nonz250-ai-rotom'
+qiita: true
+qiitaSlug: 'nonz250-ai-rotom'
 ---
 
 こんにちは。nonz250 です。皆さんはポケモンバトルをやっていますか？

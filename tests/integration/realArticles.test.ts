@@ -133,7 +133,9 @@ describe('real-articles generator integration', () => {
     expect(produced).toEqual([ZENN_ARTICLE_BASENAME])
   })
 
-  it('writes only an empty .allowlist under public/ when no article has qiita: true', () => {
+  it('generates public/<slug>.md and allowlist entry for qiita-enabled past-dated articles', () => {
+    // tech 編は qiita:true + 過去日なので public/<slug>.md が生成され、
+    // allowlist にも qiitaSlug が載る。
     const work = prepareWorkspaceFromRealSiteArticles()
     runGenerator({
       rootDir: work,
@@ -142,8 +144,9 @@ describe('real-articles generator integration', () => {
     })
     const publicDir = join(work, 'public')
     const entries = readdirSync(publicDir)
-    expect(entries).toEqual(['.allowlist'])
+    expect(entries).toContain('.allowlist')
+    expect(entries).toContain('nonz250-ai-rotom.md')
     const manifest = readFileSync(join(publicDir, '.allowlist'), 'utf8')
-    expect(manifest).toBe('')
+    expect(manifest).toContain('nonz250-ai-rotom')
   })
 })

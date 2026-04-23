@@ -4,27 +4,34 @@ import { isFuturePublish, systemClock, type Clock } from '../clock'
 /**
  * Qiita 向け `public/<slug>.md` の frontmatter が持つ型。
  *
+ * qiita-cli v0.5.0 以降は `updated_at` / `id` / `organization_url_name` /
+ * `slide` の 4 キーを **必須** でバリデートする (キー欠落で preview / publish
+ * が弾かれる)。そのため本型では全て required にし、初回投稿時 (merge 元
+ * 不在) でも空文字列 / false をデフォルトで書き出す。
+ *
  * qiita-cli (`@qiita/qiita-cli`) との互換性:
  *   - title:    原典 title をそのまま
  *   - tags:     原典 topics を tags に写す (string[])
  *   - private:  原典 published === true なら false、published === false なら
  *               true (= 限定共有 = 未公開)
+ *   - updated_at / id / organization_url_name: 既存 public/<slug>.md が
+ *     持っていれば merge、なければ空文字列 ('')。qiita-cli の publish 後に
+ *     id / updated_at が書き戻される。
+ *   - slide: 既存があれば merge、なければ false。
  *   - ignorePublish: 二段防御の最終判定値。qiita:true かつ published:true かつ
  *                    published_at が **過去** のときのみ `false` (= publish 許可)。
  *                    それ以外は常に `true` (= 書き出し時 fail-closed で publish
  *                    をブロックする)。設計 D-6 に対応。
- *   - updated_at / id / organization_url_name / slide: 既存 public/<slug>.md
- *     が持っていれば merge (qiita-cli の sync が書き込んだ値を保持)
  */
 export interface QiitaFrontmatter {
   readonly title: string
   readonly tags: readonly string[]
   readonly private: boolean
+  readonly updated_at: string
+  readonly id: string
+  readonly organization_url_name: string
+  readonly slide: boolean
   readonly ignorePublish: boolean
-  readonly updated_at?: string
-  readonly id?: string
-  readonly organization_url_name?: string
-  readonly slide?: boolean
 }
 
 /**
@@ -86,26 +93,19 @@ export function toQiitaFrontmatter(
   existing: QiitaMergeSource = {},
   clock: Clock = systemClock,
 ): QiitaFrontmatter {
-  const base: QiitaFrontmatter = {
+  // qiita-cli v0.5.0 以降は 4 キー (updated_at/id/organization_url_name/slide)
+  // を必須バリデートする。merge 元が無い初回投稿では空文字列と false で
+  // 埋めて、qiita-cli の型検査を通過させる。publish 後は qiita-cli が
+  // id / updated_at を書き戻し、次回 generate のときに readExistingQiitaMerge
+  // 経由で保持される。
+  return {
     title: source.title,
     tags: source.topics,
     private: !source.published,
+    updated_at: existing.updated_at ?? '',
+    id: existing.id ?? '',
+    organization_url_name: existing.organization_url_name ?? '',
+    slide: existing.slide ?? false,
     ignorePublish: resolveIgnorePublish(source, clock),
   }
-  // 既存の id 等は optional フィールドとしてマージする。undefined は除外する
-  // ため条件付きでスプレッドする。
-  const extras: Partial<QiitaFrontmatter> = {}
-  if (existing.id !== undefined) {
-    extras.id = existing.id
-  }
-  if (existing.organization_url_name !== undefined) {
-    extras.organization_url_name = existing.organization_url_name
-  }
-  if (existing.slide !== undefined) {
-    extras.slide = existing.slide
-  }
-  if (existing.updated_at !== undefined) {
-    extras.updated_at = existing.updated_at
-  }
-  return { ...base, ...extras }
 }
