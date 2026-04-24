@@ -71,6 +71,8 @@ const publishedDate = computed<string>(() =>
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 
   @media screen and (max-width: 600px) {
     font-size: 1.4rem;
