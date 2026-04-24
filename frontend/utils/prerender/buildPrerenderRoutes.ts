@@ -11,6 +11,8 @@
  *   throw して build を失敗させ、誤設定の本番デプロイを水際で止める。
  */
 
+import { parsePublishedAtMs } from '../article/parsePublishedAt'
+
 /** preview 状態を本番で検出した際に送出するエラーメッセージ */
 export const PREVIEW_IN_PRODUCTION_ERROR_MESSAGE =
   'preview mode is not allowed in production build'
@@ -53,9 +55,9 @@ export interface BuildPrerenderRoutesOpts {
  *   2. `preview === true` なら全 articles のルートを返す
  *   3. `preview === false` なら以下の条件を満たす記事のみ:
  *      - `published === true`
- *      - かつ `published_at` が未指定、または `Date.parse(published_at)` が
- *        `buildTime` 以下 (予約投稿で未来日時のものは除外)
- *   4. `Date.parse` が NaN を返す不正な日時文字列は除外 (published_at は
+ *      - かつ `published_at` が未指定、または `parsePublishedAtMs(published_at)`
+ *        が `buildTime` 以下 (予約投稿で未来日時のものは除外)
+ *   4. `parsePublishedAtMs` が NaN を返す不正な日時文字列は除外 (published_at は
  *      schema レイヤで検証しているが、純関数として堅牢にふるまう)
  *
  * @param articles 評価対象の記事リスト (readonly)
@@ -88,7 +90,12 @@ export function buildPrerenderRoutes(
  * - `published === false` の下書きは常に false
  * - `published_at` 未指定は「公開扱い・予約なし」とみなす
  * - `published_at` が valid な日時で `buildTime` 以下なら true
- * - `Date.parse` が NaN (不正な文字列) なら false
+ * - `parsePublishedAtMs` が NaN (不正な文字列) なら false
+ *
+ * 日時パースは `parsePublishedAtMs` に委譲する。Zenn Legacy 形式
+ * (`YYYY-MM-DD HH:mm`) は TZ 情報を持たないため、CI (UTC) と JST 環境で
+ * 解釈が割れて予約投稿の判定がズレる事故を避ける目的で、ヘルパ側で
+ * 明示的に JST として正規化している。
  */
 function isVisibleAtBuildTime(article: Article, buildTimeMs: number): boolean {
   if (!article.published) {
@@ -97,7 +104,7 @@ function isVisibleAtBuildTime(article: Article, buildTimeMs: number): boolean {
   if (article.published_at === undefined) {
     return true
   }
-  const publishedAtMs = Date.parse(article.published_at)
+  const publishedAtMs = parsePublishedAtMs(article.published_at)
   if (Number.isNaN(publishedAtMs)) {
     return false
   }

@@ -272,4 +272,28 @@ describe('buildTagsIndex', () => {
       expect(result).toEqual({ 'boundary-tag': ['boundary'] })
     })
   })
+
+  /**
+   * Issue #59 リグレッション: prerender 側と完全に同じ TZ 解釈
+   * (Zenn Legacy 形式は JST) でタグ index も組まないと「個別ページは prerender
+   * されているのにタグページからリンクされない」逆向きの不整合が発生する。
+   */
+  describe('Zenn Legacy published_at (issue #59 regression)', () => {
+    const ZENN_LEGACY_BUILD_TIME = new Date('2026-04-23T13:00:00Z')
+
+    it('treats "YYYY-MM-DD HH:mm" as JST so a 21:00 JST article is included before a 13:00 UTC build', () => {
+      // 2026-04-23 21:00 JST = 12:00 UTC < 13:00 UTC build
+      const article: TagIndexArticle = {
+        slug: 'jst-zenn-legacy',
+        topics: ['ai'],
+        published: true,
+        published_at: '2026-04-23 21:00',
+      }
+      const result = buildTagsIndex([article], ZENN_LEGACY_BUILD_TIME, {
+        preview: false,
+        nodeEnv: 'production',
+      })
+      expect(result).toEqual({ ai: ['jst-zenn-legacy'] })
+    })
+  })
 })
