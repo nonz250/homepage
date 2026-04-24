@@ -345,6 +345,11 @@ export default defineNuxtConfig({
       // クライアント側からも参照するため `public` に配置する。
       contentPreview: isContentPreviewEnabled,
       baseUrl: 'https://nozomi.bike',
+      // GA4 測定 ID。ビルド時に `NUXT_PUBLIC_GTAG_ID` 環境変数から注入する
+      // (Nuxt の auto env mapping: `NUXT_PUBLIC_*` → `runtimeConfig.public.*`)。
+      // 未設定時は空文字にフォールバックし、`plugins/gtag.client.ts` 側の
+      // 有効化判定 (`isAnalyticsEnabled`) で fail-closed に倒れる。
+      gtagId: process.env.NUXT_PUBLIC_GTAG_ID ?? '',
     },
   },
 
