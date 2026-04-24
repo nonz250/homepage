@@ -170,5 +170,39 @@ useSeoMeta({
     max-width: 100%;
     height: auto;
   }
+
+  // GFM テーブル (`| col | col |`) の見た目。Markdown パイプラインは
+  // 変更せず、記事本文内で出力される素の `<table>` に対してスタイルを
+  // 当てるだけに留めている。本文幅を超える場合は横スクロールする。
+  :deep(table) {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  :deep(thead) {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  :deep(tbody tr:nth-child(even)) {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  :deep(th),
+  :deep(td) {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    vertical-align: top;
+    text-align: left;
+  }
+
+  :deep(th) {
+    font-weight: 600;
+  }
 }
 </style>
