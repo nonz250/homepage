@@ -113,6 +113,7 @@ useSeoMeta({
 
 <style scoped lang="scss">
 @use "assets/scss/color";
+@use "assets/scss/typography";
 
 .article-detail {
   padding-bottom: 3rem;
@@ -132,16 +133,70 @@ useSeoMeta({
   line-height: 1.8;
   color: color.$black;
 
+  // Markdown ヘディング (h2〜h6) の共通設定。
+  // ID アンカーで遷移した際、固定ヘッダの下に隠れないよう scroll-margin-top を確保する。
+  :deep(h2),
+  :deep(h3),
+  :deep(h4),
+  :deep(h5),
+  :deep(h6) {
+    margin-bottom: typography.$article-heading-margin-bottom;
+    line-height: typography.$article-heading-line-height;
+    font-weight: bold;
+    color: color.$black;
+    scroll-margin-top: var(--header-height);
+  }
+
   :deep(h2) {
-    margin-top: 2rem;
-    padding-bottom: 0.3rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    font-size: 1.4rem;
+    margin-top: typography.$article-heading-margin-top-h2;
+    padding-bottom: typography.$article-heading-h2-padding-bottom;
+    border-bottom: 1px solid typography.$article-heading-h2-border-color;
+    font-size: typography.$article-heading-font-size-h2;
   }
 
   :deep(h3) {
-    margin-top: 1.5rem;
-    font-size: 1.15rem;
+    margin-top: typography.$article-heading-margin-top-h3;
+    font-size: typography.$article-heading-font-size-h3;
+  }
+
+  :deep(h4) {
+    margin-top: typography.$article-heading-margin-top-h4;
+    font-size: typography.$article-heading-font-size-h4;
+  }
+
+  :deep(h5) {
+    margin-top: typography.$article-heading-margin-top-h5;
+    font-size: typography.$article-heading-font-size-h5;
+    color: color.$lnk-black;
+  }
+
+  :deep(h6) {
+    margin-top: typography.$article-heading-margin-top-h6;
+    font-size: typography.$article-heading-font-size-h6;
+    color: color.$lnk-black;
+  }
+
+  // モバイル幅では各ヘディングをやや縮小し、画面占有を抑えつつ階層感は保つ。
+  @media screen and (max-width: 600px) {
+    :deep(h2) {
+      font-size: typography.$article-heading-font-size-mobile-h2;
+    }
+
+    :deep(h3) {
+      font-size: typography.$article-heading-font-size-mobile-h3;
+    }
+
+    :deep(h4) {
+      font-size: typography.$article-heading-font-size-mobile-h4;
+    }
+
+    :deep(h5) {
+      font-size: typography.$article-heading-font-size-mobile-h5;
+    }
+
+    :deep(h6) {
+      font-size: typography.$article-heading-font-size-mobile-h6;
+    }
   }
 
   :deep(p) {
