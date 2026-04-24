@@ -13,6 +13,16 @@ html {
   scroll-behavior: smooth;
 }
 
+// width: 100% + padding で親要素を超過する古典的な overflow 原因を
+// 一度で遮断するためのグローバル border-box 化。既存スタイルに明示的な
+// box-sizing 指定は 2 箇所 (TheHeader / TheFooter) のみで、そちらは
+// border-box なので変更による回帰はない。
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 // OS / ブラウザで「視差効果を減らす」設定をしているユーザには、
 // スムーススクロールの代わりに即時ジャンプ（auto）を提供してアクセシビリティを確保する。
 @media (prefers-reduced-motion: reduce) {
@@ -36,12 +46,16 @@ html {
 body {
   height: 100%;
   margin: 0 auto;
+  // 子要素の絶対配置や width:100% によって body 幅を超過しても、
+  // 端末側に横スクロールを出さないための安全網。根本原因はレイアウト
+  // 側で直すのが基本だが、モバイルでの誤爆を防ぐガードとして入れる。
+  overflow-x: hidden;
 }
 
 main {
   margin: 100px 0 1.5rem 0;
-  @media screen and (max-width: 600px) {
-    margin: 50px 0 1.5rem 0;
+  @media screen and (max-width: size.$breakpoint-mobile) {
+    margin: 70px 0 1.5rem 0;
   }
 }
 
@@ -67,8 +81,8 @@ main {
 
 .content {
   margin: 0 15%;
-  @media screen and (max-width: 600px) {
-    margin: 0 5%;
+  @media screen and (max-width: size.$breakpoint-mobile) {
+    margin: 0 1rem;
   }
 }
 

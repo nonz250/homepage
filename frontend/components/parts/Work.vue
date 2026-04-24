@@ -32,7 +32,8 @@ withDefaults(defineProps<{
 @use "assets/scss/size";
 
 .v-Work {
-  width: size.$item-size;
+  width: 100%;
+  max-width: size.$item-size;
   display: grid;
   align-items: center;
 }

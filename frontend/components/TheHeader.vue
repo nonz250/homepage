@@ -3,24 +3,21 @@
     <div class="actions parallax-bg" :class="{ hide: !hideScrollingActions }">
       <div class="left" />
       <div class="center">
-        <nuxt-link to="/#about" class="actions-link mr-1">
+        <nuxt-link to="/#about" class="actions-link">
           About
         </nuxt-link>
-        <nuxt-link to="/#service" class="actions-link mr-1">
+        <nuxt-link to="/#service" class="actions-link">
           Service
         </nuxt-link>
-        <nuxt-link to="/#works" class="actions-link mr-1">
+        <nuxt-link to="/#works" class="actions-link">
           Works
         </nuxt-link>
-        <nuxt-link to="/articles" class="actions-link mr-1">
+        <nuxt-link to="/articles" class="actions-link">
           Articles
         </nuxt-link>
-        <nuxt-link to="/#contact" class="actions-link mr-1">
+        <nuxt-link to="/#contact" class="actions-link">
           Contact
         </nuxt-link>
-        <anchor link="https://labo.nozomi.bike" :shine="false" class="actions-link">
-          Blog
-        </anchor>
       </div>
       <div class="right" />
     </div>
@@ -43,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import Anchor from "~/components/atoms/Anchor.vue";
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 import {
@@ -85,6 +83,7 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 @use "assets/scss/color";
+@use "assets/scss/size";
 
 .v-Header {
   position: fixed;
@@ -98,7 +97,12 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-content: center;
-  padding: calc(50px - 17.5px) 0 !important;
+  padding: calc(50px - 17.5px) 1rem !important;
+  box-sizing: border-box;
+
+  @media screen and (max-width: size.$breakpoint-mobile) {
+    padding: 0.5rem 0.75rem !important;
+  }
 }
 
 .actions-link {
@@ -107,8 +111,14 @@ onBeforeUnmount(() => {
   font-size: 1.5rem;
   text-decoration: none;
   cursor: pointer;
-  @media screen and (max-width: 600px) {
-    font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+
+  @media screen and (max-width: size.$breakpoint-mobile) {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.35rem;
   }
 }
 
@@ -125,7 +135,9 @@ onBeforeUnmount(() => {
 .center {
   display: flex;
   justify-content: flex-end;
-  align-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .right {

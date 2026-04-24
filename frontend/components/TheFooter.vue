@@ -17,6 +17,8 @@
   width: 100%;
   color: color.$lnk-black;
   background-color: color.$white;
-  padding: 0 0 0 0 !important;
+  padding: 0.5rem 1rem !important;
+  box-sizing: border-box;
+  text-align: center;
 }
 </style>

@@ -160,15 +160,25 @@ useSeoMeta({
     background-color: rgba(0, 0, 0, 0.05);
     border-radius: 0.25rem;
     font-size: 0.9rem;
+    // モバイル端末で長い行の折返しを許容し、
+    // どうしても 1 行に収まらないコードだけ横スクロールさせる。
+    max-width: 100%;
   }
 
   :deep(code) {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break: break-word;
   }
 
   :deep(img) {
     max-width: 100%;
     height: auto;
+  }
+
+  // 長い URL や外部リンクがモバイル幅で親要素を突き抜けないよう、
+  // 折返し許容をデフォルトにする。
+  :deep(a) {
+    overflow-wrap: anywhere;
   }
 }
 </style>
