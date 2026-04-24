@@ -1,2 +1,7 @@
 $item-size: 350px;
 $header-height: 50px;
+
+// モバイル表示の上限幅。Tailwind/Bootstrap の "sm" breakpoint と同じ
+// 感覚で使える値にそろえ、スマートフォン縦向きを境界に PC 向けレイアウト
+// へ切り替える。既存の `max-width: 600px` media query と揃える。
+$breakpoint-mobile: 600px;

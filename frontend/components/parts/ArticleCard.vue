@@ -129,6 +129,7 @@ const publishedDate = computed<string>(() =>
   font-weight: bold;
   line-height: 1.5;
   color: color.$black;
+  overflow-wrap: anywhere;
 }
 
 .draft-badge {
