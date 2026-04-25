@@ -21,6 +21,7 @@
  *   と `buildTime` を注入し、返り値は `Record<tag, slug[]>`。
  */
 import { PREVIEW_IN_PRODUCTION_ERROR_MESSAGE } from './buildPrerenderRoutes'
+import { parsePublishedAtMs } from '../article/parsePublishedAt'
 
 /** production ビルドを識別する NODE_ENV の値 */
 const NODE_ENV_PRODUCTION = 'production'
@@ -59,7 +60,7 @@ export interface BuildTagsIndexOpts {
  *   3. `preview === false` なら `buildPrerenderRoutes` と同じ可視性条件
  *      (published === true かつ published_at が未指定または buildTime 以下) を
  *      満たす記事のみを集計
- *   4. `Date.parse` が NaN を返す不正な日時文字列は除外
+ *   4. `parsePublishedAtMs` が NaN を返す不正な日時文字列は除外
  *   5. 各記事の topics を展開し、同じ tag に属する slug を配列として集約
  *   6. 1 記事内で同じ tag が重複していても slug は 1 回だけ含める
  *   7. タグごとの slug 配列は出現順を維持 (記事列の順序 × topics の順序)
@@ -109,7 +110,7 @@ export function buildTagsIndex(
  * - `published === false` の下書きは常に false
  * - `published_at` 未指定は「公開扱い・予約なし」とみなす
  * - `published_at` が valid な日時で `buildTime` 以下なら true
- * - `Date.parse` が NaN (不正な文字列) なら false (fail-closed)
+ * - `parsePublishedAtMs` が NaN (不正な文字列) なら false (fail-closed)
  */
 function isVisibleAtBuildTime(
   article: TagIndexArticle,
@@ -121,7 +122,7 @@ function isVisibleAtBuildTime(
   if (article.published_at === undefined) {
     return true
   }
-  const publishedAtMs = Date.parse(article.published_at)
+  const publishedAtMs = parsePublishedAtMs(article.published_at)
   if (Number.isNaN(publishedAtMs)) {
     return false
   }

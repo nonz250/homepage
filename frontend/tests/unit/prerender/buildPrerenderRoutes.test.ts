@@ -188,4 +188,43 @@ describe('buildPrerenderRoutes', () => {
       expect(result).toEqual(['/articles/a', '/articles/b', '/articles/c'])
     })
   })
+
+  /**
+   * Issue #59 リグレッション: Zenn Legacy 形式 (`YYYY-MM-DD HH:mm`) は TZ
+   * 情報を持たないため、CI の UTC 環境で `Date.parse` をそのまま使うと
+   * 21:00 JST が 21:00 UTC として未来扱いされ、記事が prerender 対象から
+   * 漏れて URL が 404 になる事故が発生した。`parsePublishedAtMs` 経由で
+   * 必ず JST として解釈されることを絶対時刻で固定する。
+   */
+  describe('Zenn Legacy published_at (issue #59 regression)', () => {
+    const ZENN_LEGACY_BUILD_TIME = new Date('2026-04-23T13:00:00Z')
+
+    it('treats "YYYY-MM-DD HH:mm" as JST so a 21:00 JST article published before a 13:00 UTC build is visible', () => {
+      // 2026-04-23 21:00 JST = 2026-04-23 12:00 UTC < 13:00 UTC build
+      const article: Article = {
+        slug: 'jst-zenn-legacy',
+        published: true,
+        published_at: '2026-04-23 21:00',
+      }
+      const result = buildPrerenderRoutes([article], ZENN_LEGACY_BUILD_TIME, {
+        preview: false,
+        nodeEnv: 'production',
+      })
+      expect(result).toEqual(['/articles/jst-zenn-legacy'])
+    })
+
+    it('still excludes a future Zenn Legacy datetime once interpreted as JST', () => {
+      // 2099-01-01 09:00 JST is in the far future regardless of TZ.
+      const article: Article = {
+        slug: 'future',
+        published: true,
+        published_at: '2099-01-01 09:00',
+      }
+      const result = buildPrerenderRoutes([article], ZENN_LEGACY_BUILD_TIME, {
+        preview: false,
+        nodeEnv: 'production',
+      })
+      expect(result).toEqual([])
+    })
+  })
 })
