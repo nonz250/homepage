@@ -1,0 +1,32 @@
+// 記事本文 (Markdown) ヘディングのタイポグラフィスケール。
+// h2 -> h6 にかけて段階的にサイズと上マージンを縮小し、視覚的な階層感を作る。
+// マジックナンバー回避と、将来テーマ調整時の一括変更を目的に集約する。
+
+// デスクトップ (>=601px)
+$article-heading-font-size-h2: 1.6rem;
+$article-heading-font-size-h3: 1.3rem;
+$article-heading-font-size-h4: 1.1rem;
+$article-heading-font-size-h5: 1rem;
+$article-heading-font-size-h6: 0.95rem;
+
+// モバイル (<=600px) は 0.9 倍前後に縮小して可読性を確保する。
+$article-heading-font-size-mobile-h2: 1.4rem;
+$article-heading-font-size-mobile-h3: 1.2rem;
+$article-heading-font-size-mobile-h4: 1.05rem;
+$article-heading-font-size-mobile-h5: 0.95rem;
+$article-heading-font-size-mobile-h6: 0.9rem;
+
+// 上マージン: 直前要素 (本文/リスト/コードブロック) との縦リズムを作るために
+// 段階的に小さくする。下マージンは line-height で吸収するため小さめ。
+$article-heading-margin-top-h2: 2.5rem;
+$article-heading-margin-top-h3: 2rem;
+$article-heading-margin-top-h4: 1.75rem;
+$article-heading-margin-top-h5: 1.5rem;
+$article-heading-margin-top-h6: 1.25rem;
+
+$article-heading-margin-bottom: 0.75rem;
+$article-heading-line-height: 1.4;
+
+// h2 のみ下線を引いて章区切りを強調する。色は本文と同じく低彩度で抑える。
+$article-heading-h2-border-color: rgba(0, 0, 0, 0.08);
+$article-heading-h2-padding-bottom: 0.3rem;
