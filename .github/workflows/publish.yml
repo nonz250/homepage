@@ -201,17 +201,20 @@ jobs:
           # 後続 push に必要。GITHUB_TOKEN は contents: write を持っている。
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pull latest (defensive rebase)
+        # qiita-publish は自前実行に切り替えたので push は行わないが、並列
+        # push (人手コミット等) が来ても衝突しないよう保険として rebase する。
+        # rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
+        # download-artifact より前に実行する: artifact が articles/ や public/
+        # の tracked file を上書きすると unstaged changes として認識され、
+        # `git pull --rebase` が exit 128 で失敗するため。
+        run: git pull --rebase origin "${GITHUB_REF_NAME}"
+
       - name: Download generated artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: generated
           path: .
-
-      - name: Pull latest (defensive rebase)
-        # qiita-publish は自前実行に切り替えたので push は行わないが、並列
-        # push (人手コミット等) が来ても衝突しないよう保険として rebase する。
-        # rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
-        run: git pull --rebase origin "${GITHUB_REF_NAME}"
 
       - name: Configure git identity
         # github-actions[bot] を commit 主体にする。user.email は GitHub 推奨
