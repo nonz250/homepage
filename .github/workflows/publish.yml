@@ -187,6 +187,24 @@ jobs:
           find public -maxdepth 1 -type f -regextype posix-extended -regex '.*/[a-f0-9]+\.md$' -print -delete || true
           rm -rf public/.remote
 
+      - name: Upload published public/ (with qiita ids written back)
+        # qiita-cli は publish 成功時に レスポンスの記事 ID を public/<slug>.md の
+        # フロントマター `id` フィールドに書き戻す。この変更を auto-commit job に
+        # 受け渡さないと、リポジトリには id 空のまま残り、次回 publish で再び
+        # 新規記事として作成されてしまう (Qiita 上に同一記事が量産される)。
+        # UUID drafts 削除と public/.remote 除去後の状態を artifact 化することで、
+        # 漏洩リスクを避けつつ id 書き戻しのみを永続化する。
+        # if-no-files-found: warn とするのは publish 対象 0 件のレース時に
+        # 致命的 error にしないため (.allowlist が常にあるはずだが保守的に)。
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-public
+          path: public/
+          if-no-files-found: warn
+          retention-days: 7
+          # public/.allowlist を含めるため hidden files を許可。
+          include-hidden-files: true
+
   auto-commit:
     name: Commit generated articles diff back to main
     needs: qiita-publish
@@ -215,6 +233,24 @@ jobs:
         with:
           name: generated
           path: .
+
+      - name: Download published public/ (qiita ids)
+        # qiita-publish job が書き戻した id を含む public/ を別ディレクトリに
+        # 一旦展開する。直接 path: public/ にすると download-artifact@v4 の
+        # 同 path への重複展開挙動に依存することになるため、明示的に分離して
+        # 後段の cp で同名ファイル後勝ちを保証する。
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: published-public
+          path: .published-public/
+
+      - name: Overlay qiita-written-back ids onto public/
+        # generated artifact 由来の public/ に qiita-cli が id を書き戻した
+        # public/<slug>.md を上書きする。同名ファイルは published-public 側が
+        # 後勝ち。.published-public ディレクトリは tmp なので即削除する。
+        run: |
+          cp -a .published-public/. public/
+          rm -rf .published-public
 
       - name: Configure git identity
         # github-actions[bot] を commit 主体にする。user.email は GitHub 推奨
