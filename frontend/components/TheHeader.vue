@@ -15,12 +15,9 @@
         <nuxt-link to="/articles" class="actions-link mr-1">
           Articles
         </nuxt-link>
-        <nuxt-link to="/#contact" class="actions-link mr-1">
+        <nuxt-link to="/#contact" class="actions-link">
           Contact
         </nuxt-link>
-        <anchor link="https://labo.nozomi.bike" :shine="false" class="actions-link">
-          Blog
-        </anchor>
       </div>
       <div class="right" />
     </div>
