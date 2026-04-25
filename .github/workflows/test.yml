@@ -51,6 +51,19 @@ on:
 permissions:
   contents: read
 
+# 同一 ref への連続 push があった場合、進行中の test run を kill して
+# 最新 push のみを評価する。CI 副作用は同一 run 内の artifact / nginx
+# コンテナで完結し ephemeral runner で破棄されるため、cancel しても
+# 外部状態は壊れない (publish.yml のような外部 API publish はここに
+# 含まれない)。
+# - PR push: github.ref = refs/pull/<n>/merge で PR ごとに独立。
+#   別 PR を巻き添えキャンセルしない。
+# - main push: github.ref = refs/heads/main で main 上の連続マージを
+#   最新だけ走らせる。
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
