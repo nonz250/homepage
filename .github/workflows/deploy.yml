@@ -13,6 +13,14 @@ on:
 permissions:
   contents: read
 
+# 手動連打で deploy が二重起動すると rsync が同一ホストに重なり、
+# 本番側のファイルが中途半端な state になる恐れがある。直列化のみ
+# 行い、進行中の deploy は最後まで走らせる (cancel-in-progress: false)。
+# publish.yml と同じ「副作用ありの job は cancel しない」方針。
+concurrency:
+  group: deploy-manual-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
