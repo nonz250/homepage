@@ -3,26 +3,50 @@ name: Test
 # Phase 1 Blog MVP の品質ゲート。
 #
 # ジョブ構成:
-#   typecheck           - vue-tsc による型チェック (必須ゲート)
-#   unit                - 純関数 / コンポーネント単体テスト
-#   integration         - npm run generate を走らせて .output / .data を検証
-#   contract            - CONTENT_PREVIEW などランタイム契約の固定
-#   build-artifact-scan - generate 後の下書き / 外部画像リーク検査
-#   e2e                 - Playwright による end-to-end テスト (Step 17 で追加)
-#   security-headers    - Phase 3 Batch D: nginx 経由で CSP Report-Only など
-#                          のセキュリティヘッダが返ることを検査
+#   typecheck        - vue-tsc による型チェック (必須ゲート)
+#   unit             - 純関数 / コンポーネント単体テスト
+#   integration      - vitest integration (vitest が `npm run generate` を回さず
+#                       Nuxt Content の native binding を直接使う)
+#   contract         - CONTENT_PREVIEW などランタイム契約の固定
+#   generate         - `npm run generate` を 1 回だけ走らせ、`.output/public` を
+#                       artifact 化する。下書き / 外部画像リーク検査もここで
+#                       併せて実施し、漏洩した artifact を後段に流さない。
+#                       後段 (e2e / security-headers) はこの artifact を再利用。
+#   e2e              - Playwright による end-to-end テスト
+#   security-headers - Phase 3 Batch D: nginx 経由で CSP Report-Only など
+#                       のセキュリティヘッダが返ることを検査
 #
 # fork PR 制御:
 #   - fork の PR からは OGP 用ネットワーク fetch を一切行わないよう、
-#     generate を呼ぶジョブでは `NO_NETWORK_FETCH` を条件付きで `'1'` に
+#     generate / integration ジョブで `NO_NETWORK_FETCH` を条件付きで `'1'` に
 #     昇格させる。通常 PR / main push では空文字 (fetch 実行)。
+#
+# paths フィルタ:
+#   - docs-only PR で 7 ジョブ全部が起動するコストを削減するため、
+#     workflow trigger に paths allowlist を導入する。`frontend/`, `scripts/`,
+#     `infra/`, `site-articles/`, `.github/workflows/test.yml` のいずれにも
+#     変更がない PR ではジョブが起動しない。required check に紐付ける場合は、
+#     skip 時に check が pending のままになるため branch protection 側で
+#     対象外にするか、必要な check は別の常時起動ジョブで担保すること。
 #
 # TODO(phase 2): ESLint を導入し lint ジョブを追加する。
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'scripts/**'
+      - 'infra/**'
+      - 'site-articles/**'
+      - '.github/workflows/test.yml'
   pull_request:
+    paths:
+      - 'frontend/**'
+      - 'scripts/**'
+      - 'infra/**'
+      - 'site-articles/**'
+      - '.github/workflows/test.yml'
 
 permissions:
   contents: read
@@ -111,10 +135,12 @@ jobs:
       - name: Run contract tests
         run: npm run test:contract
 
-  build-artifact-scan:
+  generate:
+    # `npm run generate` を test ワークフロー内で 1 回だけ実行し、`.output/public`
+    # を artifact として後段に共有する。下書き / 外部画像リーク検査も併せて
+    # 行い、漏洩を含む artifact を upload しない fail-closed 設計にする。
+    # 後段の e2e / security-headers は同 artifact を download して再利用する。
     runs-on: ubuntu-latest
-    # 生成成果物に対するスキャンなので、先に高速なテストを通してから回す。
-    needs: [unit, integration]
     # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
     env:
       NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
@@ -142,14 +168,22 @@ jobs:
       - name: Assert no external images in build output
         working-directory: ${{ github.workspace }}
         run: bash scripts/assert-no-external-images.sh
+      - name: Upload generated public/
+        uses: actions/upload-artifact@v4
+        with:
+          # test ワークフロー内限定の artifact 名。publish.yml の `generated`
+          # と衝突しないよう test- prefix を付ける。
+          name: test-generated-public
+          path: frontend/.output/public/
+          if-no-files-found: error
+          # 検証用途で長期保管不要。CI ストレージを節約する。
+          retention-days: 1
 
   e2e:
     runs-on: ubuntu-latest
-    # ブラウザ起動が重いので、静的テストが通ってから回す。
-    needs: [unit, integration, contract]
-    # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
-    env:
-      NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
+    # ブラウザ起動が重いので、静的テストが通ってから回す。generate からは
+    # artifact を受け取るのでこちらも依存に加える。
+    needs: [generate, unit, integration, contract]
     defaults:
       run:
         working-directory: frontend
@@ -162,55 +196,42 @@ jobs:
           cache-dependency-path: 'frontend/package-lock.json'
       - name: Install dependencies
         run: npm ci --ignore-scripts
-      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
-        run: npm rebuild better-sqlite3
-      - name: Nuxt prepare (generate .nuxt types)
-        run: npm run prepare
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      - name: Build (generate)
-        run: npm run generate
+      - name: Download generated public/
+        uses: actions/download-artifact@v4
+        with:
+          name: test-generated-public
+          # playwright.config.ts の webServer は frontend/.output/public を
+          # http-server で配信する前提なので、そこに展開する。
+          path: frontend/.output/public/
       - name: Run E2E tests
         run: npm run test:e2e
 
   security-headers:
     # Phase 3 Batch D: `infra/nginx/` or `.github/workflows/test.yml` が
     # 変わったとき、および main push のときのみ走らせる。成果物が変わる度に
-    # 必要なテストではないので、コスト削減のため paths 連動で絞る。
+    # 必要なテストではないので、コスト削減のため if 条件で絞る。
     runs-on: ubuntu-latest
+    needs: generate
     if: |
       github.event_name == 'push' ||
       contains(toJSON(github.event.pull_request.changed_files), 'infra/nginx/') ||
       contains(toJSON(github.event.pull_request.changed_files), '.github/workflows/test.yml')
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Download generated public/
+        uses: actions/download-artifact@v4
         with:
-          node-version: '24.x'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
-        run: npm rebuild better-sqlite3
-      - name: Nuxt prepare (generate .nuxt types)
-        run: npm run prepare
-      # CI ではネットワーク fetch を一切行わない。NO_NETWORK_FETCH=1 で
-      # OGP 取得は failure fallback に倒れ、generate は継続する。
-      - name: Build (generate, offline)
-        env:
-          NO_NETWORK_FETCH: '1'
-        run: npm run generate
+          name: test-generated-public
+          # docker-compose.security-test.yml が ./frontend/.output/public を
+          # nginx の static root として bind mount する前提なので、そこに
+          # 展開する。
+          path: frontend/.output/public/
       - name: Start nginx (security-test)
-        working-directory: ${{ github.workspace }}
         run: docker compose -f docker-compose.security-test.yml up -d proxy
       - name: Assert security headers
-        working-directory: ${{ github.workspace }}
         run: bash scripts/assert-security-headers.sh
       - name: Stop nginx
         if: always()
-        working-directory: ${{ github.workspace }}
         run: docker compose -f docker-compose.security-test.yml down

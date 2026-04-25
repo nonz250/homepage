@@ -8,7 +8,8 @@ import type { ConsoleMessage } from '@playwright/test'
  * 記事のコンテンツには依存しない範囲でページが動作することだけを確認する。
  * 具体的な記事タイトルや本文への依存は「記事を足した / 消した」たびに
  * テストが壊れるので、ここでは避ける。記事のレンダリング契約は unit test
- * (Markdown pipeline / MDC components) と build-artifact-scan で担保する。
+ * (Markdown pipeline / MDC components) と generate ジョブの成果物検査
+ * (assert-no-drafts / assert-no-external-images) で担保する。
  *
  * 検証観点:
  *   - `/articles` 一覧が 200
