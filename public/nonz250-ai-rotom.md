@@ -7,7 +7,7 @@ tags:
   - pokemon
 private: false
 updated_at: '2026-04-26T05:55:08+09:00'
-id: bbbdaafca8c268e9c6b8
+id: 9f154dc9bc947266cb82
 organization_url_name: null
 slide: false
 ignorePublish: false
