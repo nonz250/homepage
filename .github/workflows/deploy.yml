@@ -46,6 +46,11 @@ jobs:
         run: npm run prepare
 
       - name: Build (generate)
+        # GA4 (Issue #58): 本番ビルド時のみ measurement ID を注入する。
+        # Secrets 未設定時は空文字が入り、plugins/gtag.client.ts 側の
+        # isAnalyticsEnabled で fail-closed に無効化される。
+        env:
+          NUXT_PUBLIC_GTAG_ID: ${{ secrets.NUXT_PUBLIC_GTAG_ID }}
         run: npm run generate
 
       - name: Assert no drafts in build output
