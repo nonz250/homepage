@@ -15,6 +15,7 @@ import { RSS_FEED_PATH } from './constants/rss'
 import { buildOgpInputs } from './utils/ogp/buildOgpInputs'
 import { writeArticleOgpPngs } from './utils/ogp/writeArticleOgpPngs'
 import { buildOgpFontBuffer } from './utils/ogp/buildOgpFontBuffer'
+import { loadOgpLogoBuffer } from './utils/ogp/loadOgpLogoBuffer'
 import {
   OGP_FONT_FIXED_CHARACTERS,
   OGP_FONT_SOURCE_RELATIVE,
@@ -205,6 +206,16 @@ const OGP_OUTPUT_SUBDIR = 'ogp'
  * このソース WOFF を読み込んで都度 subset 化する設計に変更した。
  */
 const OGP_FONT_SOURCE_PATH = resolve(__dirname, OGP_FONT_SOURCE_RELATIVE)
+
+/**
+ * Satori OGP テンプレートの footer に焼き込むロゴ画像 (PNG) の絶対パス。
+ * `loadOgpLogoBuffer` で Buffer を取り、`data:image/png;base64,...` の
+ * data URI に変換して `writeArticleOgpPngs` に渡す。
+ */
+const OGP_LOGO_PATH = resolve(__dirname, 'public/images/nons-labo.png')
+
+/** OGP テンプレートに焼き込むロゴ data URI の MIME prefix */
+const OGP_LOGO_DATA_URI_PREFIX = 'data:image/png;base64,'
 
 /** 予約投稿判定などに用いる prerender 実行時刻は常に現在時刻とする */
 const getBuildTime = (): Date => new Date()
@@ -507,11 +518,17 @@ export default defineNuxtConfig({
           readSourceFont: () => readFileSync(OGP_FONT_SOURCE_PATH),
         },
       )
+      // OGP テンプレートに焼き込む nons-labo ロゴを data URI 化する
+      // (設計 v2 Step 21)。loadOgpLogoBuffer は失敗時に throw するため、
+      // ロゴ抜きの OGP が量産されることはない (fail-closed)。
+      const logoBuffer = loadOgpLogoBuffer(OGP_LOGO_PATH)
+      const logoDataUri = `${OGP_LOGO_DATA_URI_PREFIX}${logoBuffer.toString('base64')}`
       const publicDir: string = nitro.options.output.publicDir
       const outputDir = resolve(publicDir, OGP_OUTPUT_SUBDIR)
       await writeArticleOgpPngs(entries, {
         outputDir,
         fontBuffer,
+        logoDataUri,
         logger: (msg) => console.info(msg),
       })
     },
