@@ -18,6 +18,9 @@
  * - 日付関連: 年月日時分秒 / ハイフン / コロン 等
  * - 記号類: # @ / . , ! ? : ; - _ ( ) [ ] < > 「」『』、。・ー
  * - 半角スペース
+ * - HORIZONTAL ELLIPSIS (U+2026 …): Satori の `-webkit-line-clamp` で
+ *   タイトルが 2 行を超えた際に末尾に挿入されるため、これが subset 外
+ *   になると豆腐 (□) として描画される。要件 1 の根本対策の一部。
  *
  * 記事 frontmatter の title はビルド時に runtime 合算する。
  */
@@ -28,7 +31,8 @@ export const OGP_FONT_FIXED_CHARACTERS =
   '年月日時分秒' +
   '#@/.,!?:;-_()[]<>' +
   '「」『』、。・ー' +
-  ' '
+  ' ' +
+  '…'
 
 /**
  * subset-font に渡す target format。
