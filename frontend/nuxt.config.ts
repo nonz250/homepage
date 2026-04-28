@@ -14,6 +14,11 @@ import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
 import { RSS_FEED_PATH } from './constants/rss'
 import { buildOgpInputs } from './utils/ogp/buildOgpInputs'
 import { writeArticleOgpPngs } from './utils/ogp/writeArticleOgpPngs'
+import { buildOgpFontBuffer } from './utils/ogp/buildOgpFontBuffer'
+import {
+  OGP_FONT_FIXED_CHARACTERS,
+  OGP_FONT_SOURCE_RELATIVE,
+} from './constants/ogpFont'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -166,13 +171,14 @@ const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 const OGP_OUTPUT_SUBDIR = 'ogp'
 
 /**
- * Satori に渡すサブセット化済み Noto Sans JP フォントの絶対パス。
- * `scripts/subset-noto-sans-jp.mjs` で生成する成果物を参照する。
+ * Satori に渡す Noto Sans JP のソースフォント (WOFF) の絶対パス。
+ *
+ * 旧来は subset 済みの woff を public/fonts に commit していたが、
+ * 新規記事タイトルの追従漏れで豆腐化する事故を避けるため、
+ * `nitro:build:public-assets` hook 内で `buildOgpFontBuffer` が
+ * このソース WOFF を読み込んで都度 subset 化する設計に変更した。
  */
-const OGP_FONT_PATH = resolve(
-  __dirname,
-  'public/fonts/noto-sans-jp-subset.woff',
-)
+const OGP_FONT_SOURCE_PATH = resolve(__dirname, OGP_FONT_SOURCE_RELATIVE)
 
 /** 予約投稿判定などに用いる prerender 実行時刻は常に現在時刻とする */
 const getBuildTime = (): Date => new Date()
@@ -460,7 +466,21 @@ export default defineNuxtConfig({
       if (entries.length === 0) {
         return
       }
-      const fontBuffer = readFileSync(OGP_FONT_PATH)
+      // 公開対象記事のタイトル文字を集約し、build 時に Noto Sans JP を subset
+      // 化したフォント Buffer を作る。新規記事に subset 漏れの漢字が混じって
+      // 豆腐化する事故を防ぐため、毎回 build 時に再計算する (設計 v2 Step 6)。
+      const fontBuffer = await buildOgpFontBuffer(
+        {
+          entries: entries.map((e) => ({
+            slug: e.slug,
+            title: e.input.title,
+          })),
+          fixedCharacters: OGP_FONT_FIXED_CHARACTERS,
+        },
+        {
+          readSourceFont: () => readFileSync(OGP_FONT_SOURCE_PATH),
+        },
+      )
       const publicDir: string = nitro.options.output.publicDir
       const outputDir = resolve(publicDir, OGP_OUTPUT_SUBDIR)
       await writeArticleOgpPngs(entries, {
