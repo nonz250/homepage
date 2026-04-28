@@ -48,3 +48,17 @@ export function resolveArticleOgImagePath(slug: string): string {
   }
   return `${ARTICLE_OG_IMAGE_PATH_PREFIX}${slug}${ARTICLE_OG_IMAGE_EXTENSION}`
 }
+
+/**
+ * `runtimeConfig.public.baseUrl` として許容するホスト名のリスト。
+ *
+ * - 本番環境のドメイン (`nozomi.bike`)
+ * - ローカル開発時の `localhost`
+ * を許可する。production build では `assertBaseUrl({ isProduction: true })`
+ * 経由で `localhost` が弾かれるため、最終 deploy 物に localhost が紛れ込む
+ * 可能性は構造的に排除されている (Step 7-8)。
+ */
+export const ALLOWED_BASE_URL_HOSTS = [
+  'nozomi.bike',
+  'localhost',
+] as const
