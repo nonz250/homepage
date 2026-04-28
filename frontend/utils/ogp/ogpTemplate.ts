@@ -23,6 +23,7 @@
  *   - 右下: 日付
  */
 import { SITE_TITLE } from '../../constants/rss'
+import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '../../constants/ogp'
 import type { SafeOgpInput } from '../../types/ogp-input'
 
 /** Satori が受け付ける element オブジェクトの最小型 */
@@ -35,11 +36,20 @@ export interface SatoriElement {
   }
 }
 
-/** OGP の画像サイズ (幅) */
-export const OGP_WIDTH = 1200
+/**
+ * OGP の画像サイズ (幅)。
+ *
+ * 真値は `constants/ogp.ts` (`OGP_IMAGE_WIDTH`) に置く。本モジュールでは
+ * 既存の import 経路 (`from './ogpTemplate'`) を破壊しないために
+ * re-export を残してある。設計 v2 Step 9。
+ */
+export const OGP_WIDTH = OGP_IMAGE_WIDTH
 
-/** OGP の画像サイズ (高さ) */
-export const OGP_HEIGHT = 630
+/**
+ * OGP の画像サイズ (高さ)。
+ * 真値は `constants/ogp.ts` (`OGP_IMAGE_HEIGHT`)。
+ */
+export const OGP_HEIGHT = OGP_IMAGE_HEIGHT
 
 /** 左端アクセント線の色 (テーマカラー) */
 const ACCENT_COLOR = '#2563eb'
