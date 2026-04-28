@@ -6,9 +6,7 @@
  * (children の数、accent bar の色、footer 子要素数 など) を直接
  * 検証する。フォント描画揺れに左右されない安定したテストにできる。
  *
- * 設計 v2 Step 0 を参照。logo オプション (Step 18-19) と
- * テーマカラー値 (Step 22) は別ステップで該当箇所のテストを
- * 追加・更新する。
+ * 設計 v2 Step 0 / Step 18-19 / Step 22 を参照。
  */
 import { describe, expect, it } from 'vitest'
 import {
@@ -21,6 +19,13 @@ import { toSafeText, type SafeOgpInput } from '../../../types/ogp-input'
 const EXPECTED_WIDTH = 1200
 const EXPECTED_HEIGHT = 630
 
+/** Step 18-19 で確定するロゴ寸法 (アスペクト比 500:263 維持) */
+const EXPECTED_LOGO_WIDTH = 96
+const EXPECTED_LOGO_HEIGHT = 50
+
+/** ロゴ用のダミー data URI */
+const DUMMY_LOGO_DATA_URI = 'data:image/png;base64,AAAA'
+
 /** root の直下は accent bar + content column の 2 要素 */
 const ROOT_CHILD_COUNT = 2
 
@@ -29,6 +34,9 @@ const CONTENT_COLUMN_CHILD_COUNT = 2
 
 /** logo なしの footer は「サイト名 / 日付」の 2 要素 */
 const FOOTER_CHILD_COUNT_WITHOUT_LOGO = 2
+
+/** logo ありの footer は「サイト名 / 日付 / ロゴ」の 3 要素 */
+const FOOTER_CHILD_COUNT_WITH_LOGO = 3
 
 function buildInput(overrides: Partial<SafeOgpInput> = {}): SafeOgpInput {
   return {
@@ -93,5 +101,52 @@ describe('createOgpElement (no logo)', () => {
     ) as readonly SatoriElement[]
     const footerChildren = asChildArray(footerRow.props.children)
     expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
+  })
+})
+
+describe('createOgpElement (logo options)', () => {
+  it('keeps the 2-cell footer when options is undefined', () => {
+    const root = createOgpElement(buildInput())
+    const [, contentColumn] = asChildArray(
+      root.props.children,
+    ) as readonly SatoriElement[]
+    const [, footerRow] = asChildArray(
+      contentColumn.props.children,
+    ) as readonly SatoriElement[]
+    const footerChildren = asChildArray(footerRow.props.children)
+    expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
+  })
+
+  it('keeps the 2-cell footer when options.logoDataUri is null', () => {
+    const root = createOgpElement(buildInput(), { logoDataUri: null })
+    const [, contentColumn] = asChildArray(
+      root.props.children,
+    ) as readonly SatoriElement[]
+    const [, footerRow] = asChildArray(
+      contentColumn.props.children,
+    ) as readonly SatoriElement[]
+    const footerChildren = asChildArray(footerRow.props.children)
+    expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
+  })
+
+  it('renders the logo as the third footer cell when logoDataUri is provided', () => {
+    const root = createOgpElement(buildInput(), {
+      logoDataUri: DUMMY_LOGO_DATA_URI,
+    })
+    const [, contentColumn] = asChildArray(
+      root.props.children,
+    ) as readonly SatoriElement[]
+    const [, footerRow] = asChildArray(
+      contentColumn.props.children,
+    ) as readonly SatoriElement[]
+    const footerChildren = asChildArray(
+      footerRow.props.children,
+    ) as readonly SatoriElement[]
+    expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITH_LOGO)
+    const logoCell = footerChildren[FOOTER_CHILD_COUNT_WITH_LOGO - 1]
+    expect(logoCell.type).toBe('img')
+    expect(logoCell.props.src).toBe(DUMMY_LOGO_DATA_URI)
+    expect(logoCell.props.width).toBe(EXPECTED_LOGO_WIDTH)
+    expect(logoCell.props.height).toBe(EXPECTED_LOGO_HEIGHT)
   })
 })

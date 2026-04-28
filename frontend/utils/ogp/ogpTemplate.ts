@@ -79,14 +79,47 @@ const EMOJI_FONT_SIZE = 96
 const FOOTER_FONT_SIZE = 28
 
 /**
+ * footer に焼き込むロゴ (`<img>`) の幅 (px)。
+ *
+ * 元画像のアスペクト比 500:263 (~ 1.9:1) を保ったまま 96x50 に
+ * 縮める。footer の高さ (FOOTER_FONT_SIZE = 28px) を大きく超えない
+ * 範囲で視認性を確保する。
+ */
+const OGP_LOGO_WIDTH = 96
+
+/** footer に焼き込むロゴの高さ (px)。500:263 比を維持して算出 */
+const OGP_LOGO_HEIGHT = 50
+
+/**
+ * `createOgpElement` の任意オプション。
+ */
+export interface CreateOgpElementOptions {
+  /**
+   * footer 右端に焼き込むロゴ画像の data URI。
+   *
+   * - null / undefined: ロゴなし (既存 2-cell footer)
+   * - 文字列: `<img src={...}>` を footer 右端 (3 つ目の cell) に追加
+   *
+   * caller (`generateArticleOgp`) は `normalizeLogoDataUri` で
+   * 検証済みの値を渡すこと。テンプレート側では prefix チェックを
+   * 行わない (二重検証コストの回避と SRP)。
+   */
+  readonly logoDataUri?: string | null
+}
+
+/**
  * Satori 用の element ツリーを構築する純関数。
  *
  * 戻り値はそのまま `satori(element, options)` に渡せる。
  *
  * @param input サニタイズ済みの入力
+ * @param options 任意の追加オプション (logo data URI など)
  * @returns Satori 用の element (React.createElement 相当のオブジェクト)
  */
-export function createOgpElement(input: SafeOgpInput): SatoriElement {
+export function createOgpElement(
+  input: SafeOgpInput,
+  options?: CreateOgpElementOptions,
+): SatoriElement {
   const emojiBlock: SatoriElement | null = input.emoji
     ? {
         type: 'div',
@@ -131,7 +164,11 @@ export function createOgpElement(input: SafeOgpInput): SatoriElement {
     },
   }
 
-  const footerRight: SatoriElement = {
+  // ロゴありの場合は中央に日付を寄せ、右端をロゴに譲る。
+  // ロゴなしの場合は従来どおり「サイト名 / 日付」の 2 セルを space-between
+  // で配置するため、ここでは中央配置の単一セルを生成しておき、
+  // children 配列の組み立てで使い分ける。
+  const footerDate: SatoriElement = {
     type: 'div',
     props: {
       style: {
@@ -142,6 +179,25 @@ export function createOgpElement(input: SafeOgpInput): SatoriElement {
       children: input.date,
     },
   }
+
+  // ロゴ要素 (logoDataUri が null/undefined のときは生成しない)
+  const logoDataUri = options?.logoDataUri ?? null
+  const footerLogo: SatoriElement | null = logoDataUri
+    ? {
+        type: 'img',
+        props: {
+          src: logoDataUri,
+          width: OGP_LOGO_WIDTH,
+          height: OGP_LOGO_HEIGHT,
+          style: {
+            // Satori の <img> は明示的に width/height を持たせると
+            // 寸法を反映する。display flex 配下で歪まないよう
+            // object-fit: contain で安全側に倒す。
+            objectFit: 'contain',
+          },
+        },
+      }
+    : null
 
   const mainChildren: (SatoriElement | null)[] = [
     emojiBlock,
@@ -165,15 +221,22 @@ export function createOgpElement(input: SafeOgpInput): SatoriElement {
     },
   }
 
+  // logo がない場合は 2 セル (左: サイト名 / 右: 日付) で space-between。
+  // logo がある場合は 3 セル (左: サイト名 / 中: 日付 / 右: ロゴ) で
+  // space-between とし、それぞれが両端 / 中央に置かれる。
+  const footerChildren: SatoriElement[] = footerLogo
+    ? [footerLeft, footerDate, footerLogo]
+    : [footerLeft, footerDate]
+
   const footerRow: SatoriElement = {
     type: 'div',
     props: {
       style: {
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'baseline',
+        alignItems: 'center',
       },
-      children: [footerLeft, footerRight],
+      children: footerChildren,
     },
   }
 
