@@ -20,7 +20,12 @@ import {
   type FlatTocHeading,
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
-import { resolveArticleOgImagePath } from '~/constants/seo'
+import {
+  OGP_IMAGE_MIME_TYPE,
+  resolveArticleOgImagePath,
+} from '~/constants/seo'
+import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '~/constants/ogp'
+import { buildAbsoluteUrl } from '~/utils/seo/buildAbsoluteUrl'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -83,12 +88,19 @@ const baseUrl: string = runtimeConfig.public.baseUrl
 // 末尾スラッシュ付きに揃える。nginx 側で `/articles/<slug>` → `/articles/<slug>/`
 // に 301 リダイレクトされるため、og:url が redirect 元のままだと SNS クローラが
 // canonical 不一致でカード表示を失敗することがある。redirect 後の URL に寄せる。
-const canonicalUrl: string = `${baseUrl}/articles/${slug}/`
-const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
+const canonicalUrl: string = buildAbsoluteUrl(baseUrl, `/articles/${slug}/`)
+const ogImageUrl: string = buildAbsoluteUrl(
+  baseUrl,
+  resolveArticleOgImagePath(slug),
+)
+const ogImageAlt: string = `${article.title} - Nozomi Hosaka`
 
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
 })
+// Slack / Twitter X / Facebook の OGP unfurl には絶対 URL + 寸法 + MIME +
+// alt + Twitter Card 系列を全て揃える必要がある。動的値 (article.title) は
+// 型付き API (useSeoMeta) で扱い、誤った tag 名が使われないように維持する。
 useSeoMeta({
   description,
   ogType: 'article',
@@ -96,6 +108,15 @@ useSeoMeta({
   ogDescription: description,
   ogUrl: canonicalUrl,
   ogImage: ogImageUrl,
+  ogImageType: OGP_IMAGE_MIME_TYPE,
+  ogImageWidth: OGP_IMAGE_WIDTH,
+  ogImageHeight: OGP_IMAGE_HEIGHT,
+  ogImageAlt: ogImageAlt,
+  twitterCard: 'summary_large_image',
+  twitterTitle: article.title,
+  twitterDescription: description,
+  twitterImage: ogImageUrl,
+  twitterImageAlt: ogImageAlt,
 })
 </script>
 
