@@ -19,6 +19,9 @@ import { toSafeText, type SafeOgpInput } from '../../../types/ogp-input'
 const EXPECTED_WIDTH = 1200
 const EXPECTED_HEIGHT = 630
 
+/** Step 22 で nons-labo ブランドカラーに切り替えたテーマ色 */
+const EXPECTED_ACCENT_COLOR = '#3d50b7'
+
 /** Step 18-19 で確定するロゴ寸法 (アスペクト比 500:263 維持) */
 const EXPECTED_LOGO_WIDTH = 96
 const EXPECTED_LOGO_HEIGHT = 50
@@ -77,8 +80,7 @@ describe('createOgpElement (no logo)', () => {
     expect(children.length).toBe(ROOT_CHILD_COUNT)
     const [accentBar, contentColumn] = children as readonly SatoriElement[]
     expect(accentBar.type).toBe('div')
-    expect(typeof accentBar.props.style?.background).toBe('string')
-    expect(accentBar.props.style?.background as string).toMatch(/^#[0-9a-fA-F]{6}$/)
+    expect(accentBar.props.style?.background).toBe(EXPECTED_ACCENT_COLOR)
     expect(contentColumn.type).toBe('div')
   })
 

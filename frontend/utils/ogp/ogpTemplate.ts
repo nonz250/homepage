@@ -51,8 +51,12 @@ export const OGP_WIDTH = OGP_IMAGE_WIDTH
  */
 export const OGP_HEIGHT = OGP_IMAGE_HEIGHT
 
-/** 左端アクセント線の色 (テーマカラー) */
-const ACCENT_COLOR = '#2563eb'
+/**
+ * 左端アクセント線の色 (テーマカラー / nons-labo ブランドカラー)。
+ *
+ * 設計 v2 Step 22 で `#2563eb` から nons-labo の色 `#3d50b7` に切り替えた。
+ */
+const ACCENT_COLOR = '#3d50b7'
 
 /** 背景色 */
 const BACKGROUND_COLOR = '#ffffff'
