@@ -20,9 +20,13 @@ import {
   type FlatTocHeading,
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
-import { resolveArticleOgImagePath } from '~/constants/seo'
+import {
+  OGP_IMAGE_MIME_TYPE,
+  resolveArticleOgImagePath,
+} from '~/constants/seo'
+import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '~/constants/ogp'
 import { normalizeMetaContent } from '~/utils/seo/normalizeMetaContent'
-import { OGP_WIDTH, OGP_HEIGHT } from '~/utils/ogp/ogpTemplate'
+import { buildAbsoluteUrl } from '~/utils/seo/buildAbsoluteUrl'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -85,8 +89,12 @@ const baseUrl: string = runtimeConfig.public.baseUrl
 // 末尾スラッシュ付きに揃える。nginx 側で `/articles/<slug>` → `/articles/<slug>/`
 // に 301 リダイレクトされるため、og:url が redirect 元のままだと SNS クローラが
 // canonical 不一致でカード表示を失敗することがある。redirect 後の URL に寄せる。
-const canonicalUrl: string = `${baseUrl}/articles/${slug}/`
-const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
+const canonicalUrl: string = buildAbsoluteUrl(baseUrl, `/articles/${slug}/`)
+const ogImageUrl: string = buildAbsoluteUrl(
+  baseUrl,
+  resolveArticleOgImagePath(slug),
+)
+const ogImageAlt: string = `${article.title} - Nozomi Hosaka`
 
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
@@ -95,6 +103,8 @@ useHead({
 // unfurl 判定に必須のタグを <style> より前へ押し上げる。Unhead v2 の
 // `tagPriority: 'critical'` (= 2) は Capo.js のソート規則で同期 stylesheets
 // より後ろに置かれるため、数値で直接負値を指定して確実に前へ出す。
+// 寸法 / MIME / alt / Twitter Card 系列は Slack / Twitter X / Facebook の
+// unfurl 完成度を上げるために併せて指定する (priority は通常で十分)。
 const PRE_STYLE_PRIORITY = -8
 useHead({
   meta: [
@@ -105,10 +115,14 @@ useHead({
     { property: 'og:type', content: 'article', tagPriority: PRE_STYLE_PRIORITY },
     { name: 'twitter:image', content: ogImageUrl, tagPriority: PRE_STYLE_PRIORITY },
     { name: 'description', content: description, tagPriority: PRE_STYLE_PRIORITY },
-    { property: 'og:image:type', content: 'image/png' },
-    { property: 'og:image:width', content: String(OGP_WIDTH) },
-    { property: 'og:image:height', content: String(OGP_HEIGHT) },
-    { property: 'og:image:alt', content: article.title },
+    { property: 'og:image:type', content: OGP_IMAGE_MIME_TYPE },
+    { property: 'og:image:width', content: String(OGP_IMAGE_WIDTH) },
+    { property: 'og:image:height', content: String(OGP_IMAGE_HEIGHT) },
+    { property: 'og:image:alt', content: ogImageAlt },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: article.title },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image:alt', content: ogImageAlt },
   ],
 })
 </script>
