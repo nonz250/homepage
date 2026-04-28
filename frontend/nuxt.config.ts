@@ -41,14 +41,40 @@ import {
   OGP_FETCH_MAX_BYTES,
   OGP_FETCH_MAX_REDIRECTS,
   OGP_FETCH_TIMEOUT_MS,
+  OGP_IMAGE_HEIGHT,
+  OGP_IMAGE_WIDTH,
   OGP_USER_AGENT,
 } from './constants/ogp'
+import {
+  DEFAULT_OG_IMAGE_PATH,
+  OGP_IMAGE_MIME_TYPE,
+  SITE_DEFAULT_OG_IMAGE_ALT,
+} from './constants/seo'
+import { assertBaseUrl } from './utils/seo/assertBaseUrl'
+import { buildAbsoluteUrl } from './utils/seo/buildAbsoluteUrl'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
 const isPreviewEnv = normalizePreviewFlag(process.env.CONTENT_PREVIEW)
 const isProductionBuild = process.env.NODE_ENV === 'production'
 const isContentPreviewEnabled = isPreviewEnv && !isProductionBuild
+
+/**
+ * サイト baseUrl の単一ソース。
+ *
+ * `runtimeConfig.public.baseUrl` と `app.head.meta` の og:image 等を
+ * 全て同一の literal から組み立てるためにトップレベル定数として固める。
+ * production build の検証は `assertBaseUrl` を即時実行することで build 時に
+ * fail-closed する。
+ */
+const SITE_BASE_URL = 'https://nozomi.bike'
+assertBaseUrl(SITE_BASE_URL, { isProduction: isProductionBuild })
+
+/** 既定 OG 画像の絶対 URL (記事ページが上書きしない場合の fallback) */
+const DEFAULT_OG_IMAGE_ABSOLUTE_URL = buildAbsoluteUrl(
+  SITE_BASE_URL,
+  DEFAULT_OG_IMAGE_PATH,
+)
 
 // ES Module 上で __dirname を取得するための定型処理。
 // nuxt.config.ts は Nuxt ランタイム経由で評価されるため、
@@ -350,7 +376,7 @@ export default defineNuxtConfig({
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
       // クライアント側からも参照するため `public` に配置する。
       contentPreview: isContentPreviewEnabled,
-      baseUrl: 'https://nozomi.bike',
+      baseUrl: SITE_BASE_URL,
     },
   },
 
@@ -508,7 +534,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'https://nozomi.bike' },
+        { name: 'description', content: SITE_BASE_URL },
         { name: 'format-detection', content: 'telephone=no' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:site', content: '@nonz250' },
@@ -516,13 +542,19 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Nozomi Hosaka' },
         { property: 'og:title', content: 'Nozomi Hosaka' },
-        { property: 'og:description', content: 'https://nozomi.bike' },
-        { property: 'og:url', content: 'https://nozomi.bike' },
-        { property: 'og:image', content: 'https://nozomi.bike/images/homepage-ogp.webp' },
-        // `og:image:alt` は Phase 0 以前の "Business card" が残っており、
-        // 現サイトの記事/ポートフォリオ用途と一致しないため削除。記事別の
-        // 動的 alt は後続 Phase で検討する (今は未設定のほうが誤表示より
-        // 安全)。
+        { property: 'og:description', content: SITE_BASE_URL },
+        { property: 'og:url', content: SITE_BASE_URL },
+        // Slack や Twitter / X のクローラは絶対 URL + 寸法 + MIME + alt が
+        // 揃っていることを前提にカードを unfurl する。Step 12 で全項目を
+        // 静的値で固める (動的値は記事ページ側 useSeoMeta で上書き)。
+        { property: 'og:image', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { property: 'og:image:secure_url', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { property: 'og:image:type', content: OGP_IMAGE_MIME_TYPE },
+        { property: 'og:image:width', content: String(OGP_IMAGE_WIDTH) },
+        { property: 'og:image:height', content: String(OGP_IMAGE_HEIGHT) },
+        { property: 'og:image:alt', content: SITE_DEFAULT_OG_IMAGE_ALT },
+        { name: 'twitter:image', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { name: 'twitter:image:alt', content: SITE_DEFAULT_OG_IMAGE_ALT },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
