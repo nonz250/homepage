@@ -14,8 +14,25 @@
  * `runtimeConfig.public.baseUrl` と文字列結合して絶対 URL にする。
  * Batch B の Satori OGP では記事ごとに画像を差し替える予定のため、本定数は
  * 既定 fallback 値として残し続ける想定。
+ *
+ * Slack の OGP unfurl は `image/webp` を再生成しない実装があり、
+ * 互換性のため PNG 版を fallback として配置する (Step 10-11)。
  */
-export const DEFAULT_OG_IMAGE_PATH = '/images/homepage-ogp.webp'
+export const DEFAULT_OG_IMAGE_PATH = '/images/homepage-ogp.png'
+
+/**
+ * 既定の OGP 画像 (`DEFAULT_OG_IMAGE_PATH`) に対応する `og:image:alt` テキスト。
+ * 画像表示できない環境向けにアクセシブルな代替テキストを提供する。
+ */
+export const SITE_DEFAULT_OG_IMAGE_ALT =
+  'Nozomi Hosaka - portfolio and articles'
+
+/**
+ * 自動生成 OGP PNG の MIME type。
+ * `og:image:type` / `twitter:image:type` 用。Slack 等は MIME 明示によって
+ * カード表示の確度が上がる。
+ */
+export const OGP_IMAGE_MIME_TYPE = 'image/png'
 
 /**
  * 記事個別 OGP PNG を公開配置する public パスのプレフィックス (先頭スラッシュ込み)。
@@ -48,3 +65,17 @@ export function resolveArticleOgImagePath(slug: string): string {
   }
   return `${ARTICLE_OG_IMAGE_PATH_PREFIX}${slug}${ARTICLE_OG_IMAGE_EXTENSION}`
 }
+
+/**
+ * `runtimeConfig.public.baseUrl` として許容するホスト名のリスト。
+ *
+ * - 本番環境のドメイン (`nozomi.bike`)
+ * - ローカル開発時の `localhost`
+ * を許可する。production build では `assertBaseUrl({ isProduction: true })`
+ * 経由で `localhost` が弾かれるため、最終 deploy 物に localhost が紛れ込む
+ * 可能性は構造的に排除されている (Step 7-8)。
+ */
+export const ALLOWED_BASE_URL_HOSTS = [
+  'nozomi.bike',
+  'localhost',
+] as const

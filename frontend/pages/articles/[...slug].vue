@@ -20,7 +20,7 @@ import {
   type FlatTocHeading,
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
-import { resolveArticleOgImagePath } from '~/constants/seo'
+import { buildArticleSeoMeta } from '~/utils/seo/buildArticleSeoMeta'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -80,23 +80,22 @@ const description: string =
 // fallback に倒すガードが `resolveArticleOgImagePath` 内に入っている。
 const runtimeConfig = useRuntimeConfig()
 const baseUrl: string = runtimeConfig.public.baseUrl
-// 末尾スラッシュ付きに揃える。nginx 側で `/articles/<slug>` → `/articles/<slug>/`
-// に 301 リダイレクトされるため、og:url が redirect 元のままだと SNS クローラが
-// canonical 不一致でカード表示を失敗することがある。redirect 後の URL に寄せる。
-const canonicalUrl: string = `${baseUrl}/articles/${slug}/`
-const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
 
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
 })
-useSeoMeta({
-  description,
-  ogType: 'article',
-  ogTitle: article.title,
-  ogDescription: description,
-  ogUrl: canonicalUrl,
-  ogImage: ogImageUrl,
-})
+// Slack / Twitter X / Facebook の OGP unfurl には絶対 URL + 寸法 + MIME +
+// alt + Twitter Card 系列を全て揃える必要がある。値の組み立てロジックは
+// `buildArticleSeoMeta` (純関数) に閉じ込め、SFC 側はそれを useSeoMeta に
+// 流すだけにする。テストはユーティリティ単位で安定検証できる。
+useSeoMeta(
+  buildArticleSeoMeta({
+    slug,
+    title: article.title,
+    description,
+    baseUrl,
+  }),
+)
 </script>
 
 <template>

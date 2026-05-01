@@ -38,6 +38,12 @@ export interface WriteArticleOgpPngsOpts {
    * 未指定なら黙る (テスト時の副作用抑止)。
    */
   readonly logger?: (message: string) => void
+  /**
+   * footer 右端に焼き込むロゴ画像の data URI。
+   * 各 entry の `generateArticleOgp` 呼び出しに同値で伝搬する。
+   * 未指定ならロゴなし (既存挙動)。
+   */
+  readonly logoDataUri?: string
 }
 
 /**
@@ -62,6 +68,7 @@ export async function writeArticleOgpPngs(
       const entry = entries[idx]
       const png = await generateArticleOgp(entry.input, {
         fontBuffer: opts.fontBuffer,
+        logoDataUri: opts.logoDataUri,
       })
       const outPath = join(opts.outputDir, `${entry.slug}.png`)
       writeFileSync(outPath, png)

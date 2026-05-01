@@ -95,3 +95,18 @@ export const OGP_IMAGE_ALLOWED_MIMES = [
   'image/webp',
   'image/gif',
 ] as const
+
+/**
+ * 自動生成する OGP PNG の画像幅 (px)。Twitter/Slack/Facebook のいずれの
+ * カードでも 1200x630 が最も安全に表示されるためその値を採用する。
+ *
+ * 単一の真値として constants/ogp.ts に置き、Satori テンプレート / ラスタ
+ * ライザ / メタタグ生成 (og:image:width / twitter image) の全てが本定数を
+ * 参照する。設計 v2 Step 9。
+ */
+export const OGP_IMAGE_WIDTH = 1200
+
+/**
+ * 自動生成する OGP PNG の画像高さ (px)。
+ */
+export const OGP_IMAGE_HEIGHT = 630
