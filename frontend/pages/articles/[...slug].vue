@@ -147,6 +147,25 @@ useSeoMeta({
     scroll-margin-top: var(--header-height);
   }
 
+  // MDC (`@nuxt/content` v3) は h2〜h6 内側に `<a href="#id">` を自動挿入し、
+  // TOC からのジャンプを成立させる。既定だとブラウザのリンク色 (青系・下線) が
+  // 出てしまい「見出しがリンクのまま」に見えるので、親ヘディングのスタイルを
+  // そのまま継承させ、ホバー時のみ控えめにリンク性を示す。
+  :deep(h2 a),
+  :deep(h3 a),
+  :deep(h4 a),
+  :deep(h5 a),
+  :deep(h6 a) {
+    color: inherit;
+    font-weight: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: typography.$article-heading-anchor-hover-underline-offset;
+    }
+  }
+
   :deep(h2) {
     margin-top: typography.$article-heading-margin-top-h2;
     padding-bottom: typography.$article-heading-h2-padding-bottom;

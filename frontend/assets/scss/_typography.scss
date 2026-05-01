@@ -30,3 +30,9 @@ $article-heading-line-height: 1.4;
 // h2 のみ下線を引いて章区切りを強調する。色は本文と同じく低彩度で抑える。
 $article-heading-h2-border-color: rgba(0, 0, 0, 0.08);
 $article-heading-h2-padding-bottom: 0.3rem;
+
+// MDC が h2〜h6 内側に挿入する自動アンカー (`<a href="#id">`) を、
+// 通常状態ではタイトル相当に同化させ、ホバー時のみ控えめに
+// リンク性を示すための token。色は本文側で `inherit` させるため
+// ここでは hover 時のオフセットだけを集約する。
+$article-heading-anchor-hover-underline-offset: 0.2em;
