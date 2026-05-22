@@ -21,6 +21,8 @@ import {
   type TocLink,
 } from '~/utils/article/flattenTocLinks'
 import { resolveArticleOgImagePath } from '~/constants/seo'
+import { normalizeMetaContent } from '~/utils/seo/normalizeMetaContent'
+import { OGP_WIDTH, OGP_HEIGHT } from '~/utils/ogp/ogpTemplate'
 
 const route = useRoute()
 // `[...slug]` は配列で渡る可能性があるため文字列に正規化。
@@ -65,10 +67,15 @@ const tocHeadings: FlatTocHeading[] = flattenTocLinks(
   articleContent.toc?.links,
 )
 const isDraft = preview && !article.published
-const description: string =
-  typeof articleContent.description === 'string' && articleContent.description
+// `articleContent.description` は Nuxt Content が本文先頭段落から auto-generate
+// するため改行を含む。`<meta>` の属性値に載せる前に半角スペース 1 つへ正規化する。
+const fallbackDescription = `${article.title} | Nozomi Hosaka`
+const rawDescription: string =
+  typeof articleContent.description === 'string'
     ? articleContent.description
-    : `${article.title} | Nozomi Hosaka`
+    : ''
+const description: string =
+  normalizeMetaContent(rawDescription) || fallbackDescription
 
 // 記事個別の Open Graph / SEO メタを組み立てる。
 // baseUrl は runtimeConfig.public に置かれており、クライアント側からも
@@ -89,6 +96,10 @@ const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
 })
+// og:image の補助メタ (width / height / type / alt) を明示する。Slack の
+// link unfurling は画像サイズ情報がない `summary_large_image` で取りこぼしが
+// 起きるという報告が経験的にあるため、Satori 生成側の OGP_WIDTH / OGP_HEIGHT
+// と同じ値をそのまま載せる (二重定義による不整合を避ける意図でも定数を再利用)。
 useSeoMeta({
   description,
   ogType: 'article',
@@ -96,6 +107,10 @@ useSeoMeta({
   ogDescription: description,
   ogUrl: canonicalUrl,
   ogImage: ogImageUrl,
+  ogImageType: 'image/png',
+  ogImageWidth: OGP_WIDTH,
+  ogImageHeight: OGP_HEIGHT,
+  ogImageAlt: article.title,
 })
 </script>
 
