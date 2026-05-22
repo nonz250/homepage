@@ -17,9 +17,16 @@
 #                   publish 直後に sync で pull された UUID basename と
 #                   public/.remote/ を明示削除し、限定共有記事の漏洩を遮断。
 # - auto-commit   : generate job が作った articles/ と public/ の差分を
-#                   [skip ci] 付きで push する。GITHUB_TOKEN での push は
-#                   他ワークフローを起動しない (GitHub 仕様) ため、本ワーク
-#                   フロー自身の paths トリガと併せて二重に自己ループを防ぐ。
+#                   [skip ci] 付きで push する。main の branch ruleset
+#                   (pull_request 必須) を bypass するため、リポジトリ専用
+#                   Deploy key (write 権限つき、ruleset の bypass actors に
+#                   `actor_type: DeployKey` で登録) で SSH push する。
+#                   Deploy key の push は GITHUB_TOKEN と違って他ワークフロー
+#                   を起動する仕様だが、test.yml と publish.yml 自身は paths
+#                   allowlist で articles/ と public/ を除外しており、
+#                   deploy.yml は workflow_dispatch 専用なので、誤起動と
+#                   自己ループはいずれも paths と [skip ci] の二重防御で
+#                   抑えられる。
 # - deploy        : rsync + ssh で本番 nginx に静的生成物を配布する。
 #                   deploy.yml はバックアップ (workflow_dispatch) として残す。
 #
@@ -216,8 +223,12 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
-          # 後続 push に必要。GITHUB_TOKEN は contents: write を持っている。
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # main の branch ruleset (pull_request 必須) を bypass するため、
+          # GITHUB_TOKEN ではなくリポジトリ専用 Deploy key (write 権限つき) で
+          # SSH push する。`actions/checkout` の `ssh-key` パラメータは SSH agent
+          # を立てて origin を git@github.com 経路に書き換えるため、後続の
+          # `git pull --rebase` と `git push` がそのまま SSH 経由で走る。
+          ssh-key: ${{ secrets.AUTO_COMMIT_DEPLOY_KEY }}
 
       - name: Pull latest (defensive rebase)
         # qiita-publish は自前実行に切り替えたので push は行わないが、並列
