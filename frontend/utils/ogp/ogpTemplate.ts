@@ -20,7 +20,7 @@
  *   - 左上: 絵文字 (emoji があるときのみ)
  *   - 中央: タイトル (`wrapOgpTitle` で算出した行ごとに `<div>` を並べる)
  *   - 左下: サイト名 (Nozomi Hosaka)
- *   - 右下: 日付
+ *   - 右下: ロゴアイコン (square)
  */
 import { SITE_TITLE } from '../../constants/rss'
 import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '../../constants/ogp'
@@ -65,20 +65,14 @@ const CONTENT_PADDING = 80
 /** 絵文字のフォントサイズ (px) */
 const EMOJI_FONT_SIZE = 96
 
-/** サイト名・日付のフォントサイズ (px) */
+/** サイト名のフォントサイズ (px) */
 const FOOTER_FONT_SIZE = 28
 
-/**
- * footer に焼き込むロゴ (`<img>`) の幅 (px)。
- *
- * 元画像のアスペクト比 500:263 (~ 1.9:1) を保ったまま 96x50 に
- * 縮める。footer の高さ (FOOTER_FONT_SIZE = 28px) を大きく超えない
- * 範囲で視認性を確保する。
- */
-const OGP_LOGO_WIDTH = 96
+/** footer に焼き込むロゴ (`<img>`) の幅 (px)。square アイコン (512x512) を縮小 */
+const OGP_LOGO_WIDTH = 128
 
-/** footer に焼き込むロゴの高さ (px)。500:263 比を維持して算出 */
-const OGP_LOGO_HEIGHT = 50
+/** footer に焼き込むロゴの高さ (px)。square なので幅と同値 */
+const OGP_LOGO_HEIGHT = 128
 
 /**
  * `createOgpElement` の任意オプション。
@@ -87,8 +81,8 @@ export interface CreateOgpElementOptions {
   /**
    * footer 右端に焼き込むロゴ画像の data URI。
    *
-   * - null / undefined: ロゴなし (既存 2-cell footer)
-   * - 文字列: `<img src={...}>` を footer 右端 (3 つ目の cell) に追加
+   * - null / undefined: ロゴなし (1 セルだけの footer)
+   * - 文字列: `<img src={...}>` を footer 右端 (2 つ目の cell) に追加
    *
    * caller (`generateArticleOgp`) は `normalizeLogoDataUri` で
    * 検証済みの値を渡すこと。テンプレート側では prefix チェックを
@@ -166,23 +160,6 @@ export function createOgpElement(
     },
   }
 
-  // ロゴありの場合は中央に日付を寄せ、右端をロゴに譲る。
-  // ロゴなしの場合は従来どおり「サイト名 / 日付」の 2 セルを space-between
-  // で配置するため、ここでは中央配置の単一セルを生成しておき、
-  // children 配列の組み立てで使い分ける。
-  const footerDate: SatoriElement = {
-    type: 'div',
-    props: {
-      style: {
-        fontSize: `${FOOTER_FONT_SIZE}px`,
-        color: MUTED_TEXT_COLOR,
-        fontWeight: 500,
-      },
-      children: input.date,
-    },
-  }
-
-  // ロゴ要素 (logoDataUri が null/undefined のときは生成しない)
   const logoDataUri = options?.logoDataUri ?? null
   const footerLogo: SatoriElement | null = logoDataUri
     ? {
@@ -223,19 +200,16 @@ export function createOgpElement(
     },
   }
 
-  // logo がない場合は 2 セル (左: サイト名 / 右: 日付) で space-between。
-  // logo がある場合は 3 セル (左: サイト名 / 中: 日付 / 右: ロゴ) で
-  // space-between とし、それぞれが両端 / 中央に置かれる。
   const footerChildren: SatoriElement[] = footerLogo
-    ? [footerLeft, footerDate, footerLogo]
-    : [footerLeft, footerDate]
+    ? [footerLeft, footerLogo]
+    : [footerLeft]
 
   const footerRow: SatoriElement = {
     type: 'div',
     props: {
       style: {
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: footerLogo ? 'space-between' : 'flex-start',
         alignItems: 'center',
       },
       children: footerChildren,

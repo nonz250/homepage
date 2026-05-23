@@ -35,7 +35,6 @@ const TITLE_VARIANTS: readonly string[] = [
 function buildInput(title: string): SafeOgpInput {
   return {
     title: toSafeText(title, 120),
-    date: toSafeText('2026-05-23', 32),
     tags: [],
     theme: 'light',
   }

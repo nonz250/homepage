@@ -7,7 +7,6 @@
  *   - production + preview=true は throw (buildPrerenderRoutes 由来)
  *   - 長いタイトルは切り詰められる
  *   - tags は上限 5 件
- *   - published_at が ISO なら YYYY-MM-DD に整形される
  */
 import { describe, expect, it } from 'vitest'
 import {
@@ -89,32 +88,9 @@ describe('buildOgpInputs', () => {
     expect(entries[0].input.tags.length).toBe(5)
   })
 
-  it('formats published_at as YYYY-MM-DD (UTC)', () => {
-    const entries = buildOgpInputs(
-      [
-        article({
-          slug: 'a',
-          title: 'A',
-          published: true,
-          published_at: '2026-04-18T03:00:00Z',
-        }),
-      ],
-      { preview: false, nodeEnv: undefined, buildTime: BUILD_TIME },
-    )
-    expect(entries[0].input.date).toBe('2026-04-18')
-  })
-
-  it('emits empty date when published_at is missing', () => {
-    const entries = buildOgpInputs(
-      [article({ slug: 'a', title: 'A', published: true })],
-      { preview: false, nodeEnv: undefined, buildTime: BUILD_TIME },
-    )
-    expect(entries[0].input.date).toBe('')
-  })
-
   it('excludes entries whose published_at fails to parse', () => {
     // published_at が parse 不能なら buildPrerenderRoutes 側で除外されるため
-    // OGP inputs 配列にも含まれない。
+    // OGP inputs 配列にも含まれない (本テスト自体はその伝搬挙動の確認)。
     const entries = buildOgpInputs(
       [
         article({

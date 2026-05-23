@@ -44,7 +44,6 @@ function readFontBuffer(): Buffer {
 function buildInput(): SafeOgpInput {
   return {
     title: toSafeText('テストタイトル', 120),
-    date: toSafeText('2026-04-18', 32),
     tags: [toSafeText('test', 16)],
     emoji: toSafeText('🧪', 4),
     theme: 'light',
@@ -77,7 +76,6 @@ describe('generateArticleOgp', () => {
     const fontBuffer = readFontBuffer()
     const input: SafeOgpInput = {
       title: toSafeText('no emoji title', 120),
-      date: toSafeText('2026-04-18', 32),
       tags: [],
       theme: 'light',
     }

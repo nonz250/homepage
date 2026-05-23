@@ -34,8 +34,7 @@ export type SafeText = string & { readonly [__safeOgpBrand]: 'safe' }
 /**
  * Satori OGP テンプレートに渡す入力。
  *
- * - `title`: 記事タイトル (2 行までで ellipsis 表示)
- * - `date`: 公開日などの補助テキスト (例: `2026-04-18`)
+ * - `title`: 記事タイトル (`wrapOgpTitle` で折り返して全文表示)
  * - `tags`: topics 配列 (UI 上は 0〜N 個表示する想定だが、テンプレート側で
  *            上限を制御)
  * - `emoji`: 先頭に表示する絵文字 1 字程度。無ければテンプレート側で省略
@@ -43,7 +42,6 @@ export type SafeText = string & { readonly [__safeOgpBrand]: 'safe' }
  */
 export interface SafeOgpInput {
   readonly title: SafeText
-  readonly date: SafeText
   readonly tags: readonly SafeText[]
   readonly emoji?: SafeText
   readonly theme: 'light'
