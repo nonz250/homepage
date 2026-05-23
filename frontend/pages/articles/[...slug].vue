@@ -77,14 +77,9 @@ const rawDescription: string =
 const description: string =
   normalizeMetaContent(rawDescription) || fallbackDescription
 
-// 記事個別の Open Graph / SEO メタを組み立てる。
-// baseUrl は runtimeConfig.public に置かれており、クライアント側からも
-// 参照できる (prerender 時にも展開済み)。記事 URL は `/articles/<slug>` に
-// そろえる。
-// OG 画像は Phase 4 Batch B から記事単位で切り替える。
-// `nitro:build:public-assets` hook で `.output/public/ogp/<slug>.png` を
-// 生成し、ここから `/ogp/<slug>.png` として参照する。slug が予想外の値でも
-// fallback に倒すガードが `resolveArticleOgImagePath` 内に入っている。
+// OG 画像は `nitro:build:public-assets` hook で `.output/public/ogp/<slug>.png`
+// を生成し `/ogp/<slug>.png` として参照する。`resolveArticleOgImagePath` が
+// slug 異常時の fallback を内包する。
 const runtimeConfig = useRuntimeConfig()
 const baseUrl: string = runtimeConfig.public.baseUrl
 // 末尾スラッシュ付きに揃える。nginx 側で `/articles/<slug>` → `/articles/<slug>/`
@@ -96,21 +91,25 @@ const ogImageUrl: string = `${baseUrl}${resolveArticleOgImagePath(slug)}`
 useHead({
   title: `${article.title} - Nozomi Hosaka`,
 })
-// og:image の補助メタ (width / height / type / alt) を明示する。Slack の
-// link unfurling は画像サイズ情報がない `summary_large_image` で取りこぼしが
-// 起きるという報告が経験的にあるため、Satori 生成側の OGP_WIDTH / OGP_HEIGHT
-// と同じ値をそのまま載せる (二重定義による不整合を避ける意図でも定数を再利用)。
-useSeoMeta({
-  description,
-  ogType: 'article',
-  ogTitle: article.title,
-  ogDescription: description,
-  ogUrl: canonicalUrl,
-  ogImage: ogImageUrl,
-  ogImageType: 'image/png',
-  ogImageWidth: OGP_WIDTH,
-  ogImageHeight: OGP_HEIGHT,
-  ogImageAlt: article.title,
+// Slack の Link Expanding は HTTP Range で head 先頭しか fetch しないため、
+// unfurl 判定に必須のタグを <style> より前へ押し上げる。Unhead v2 の
+// `tagPriority: 'critical'` (= 2) は Capo.js のソート規則で同期 stylesheets
+// より後ろに置かれるため、数値で直接負値を指定して確実に前へ出す。
+const PRE_STYLE_PRIORITY = -8
+useHead({
+  meta: [
+    { property: 'og:title', content: article.title, tagPriority: PRE_STYLE_PRIORITY },
+    { property: 'og:image', content: ogImageUrl, tagPriority: PRE_STYLE_PRIORITY },
+    { property: 'og:description', content: description, tagPriority: PRE_STYLE_PRIORITY },
+    { property: 'og:url', content: canonicalUrl, tagPriority: PRE_STYLE_PRIORITY },
+    { property: 'og:type', content: 'article', tagPriority: PRE_STYLE_PRIORITY },
+    { name: 'twitter:image', content: ogImageUrl, tagPriority: PRE_STYLE_PRIORITY },
+    { name: 'description', content: description, tagPriority: PRE_STYLE_PRIORITY },
+    { property: 'og:image:type', content: 'image/png' },
+    { property: 'og:image:width', content: String(OGP_WIDTH) },
+    { property: 'og:image:height', content: String(OGP_HEIGHT) },
+    { property: 'og:image:alt', content: article.title },
+  ],
 })
 </script>
 
