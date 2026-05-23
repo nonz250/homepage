@@ -224,4 +224,36 @@ describe('wrapOgpTitle', () => {
     expect(result.fontSizePx).toBe(64)
     expect(result.lines.length).toBeLessThanOrEqual(2)
   })
+
+  it('never emits control characters in the output lines', () => {
+    // SafeText 不変条件のうち「制御文字を含まない」を property として固定する。
+    // 入口 (toSafeText) で除去される前提だが、将来 wrapOgpTitle 内部で
+    // 区切り文字を追加する変更が入ったときに再発を防ぐ。
+    const samples = [
+      '短いタイトル',
+      '育成論はAIと並走する時代へ。ポケモンバトル',
+      'a-b-c-d-e f-g-h-i-j',
+      'あ'.repeat(120),
+      '。'.repeat(60),
+    ]
+    for (const raw of samples) {
+      const result = wrapOgpTitle(toSafeText(raw, 120), OPTS)
+      for (const ch of result.lines.join('')) {
+        const cp = ch.codePointAt(0) ?? 0
+        const isC0 = cp <= 0x1f
+        const isDelOrC1 = cp >= 0x7f && cp <= 0x9f
+        expect(isC0 || isDelOrC1).toBe(false)
+      }
+    }
+  })
+
+  it('does not crash on ZWJ emoji sequences', () => {
+    // 結合絵文字 (例: 👨‍👩‍👧‍👦 = 4 顔 + 3 ZWJ) は wrapOgpTitle の単位では
+    // 複数 codepoint に分かれて見えるが、crash させずに何らかの形で行に収める。
+    // grapheme cluster の保全はスコープ外 (描画品質課題) として明示する。
+    const zwjFamily = '👨‍👩‍👧‍👦'
+    const result = wrapOgpTitle(toSafeText(`家族${zwjFamily}と外出`, 120), OPTS)
+    expect(result.lines.length).toBeGreaterThanOrEqual(1)
+    expect(result.lines.join('').length).toBeGreaterThan(0)
+  })
 })

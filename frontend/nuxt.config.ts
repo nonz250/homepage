@@ -523,8 +523,8 @@ export default defineNuxtConfig({
           readSourceFont: () => readFileSync(OGP_FONT_SOURCE_PATH),
         },
       )
-      // OGP テンプレートに焼き込む nons-labo ロゴを data URI 化する
-      // (設計 v2 Step 21)。loadOgpLogoBuffer は失敗時に throw するため、
+      // OGP テンプレートに焼き込むサイトアイコン (favicon と同一の PNG) を
+      // data URI 化する。loadOgpLogoBuffer は失敗時に throw するため、
       // ロゴ抜きの OGP が量産されることはない (fail-closed)。
       const logoBuffer = loadOgpLogoBuffer(OGP_LOGO_PATH)
       const logoDataUri = `${OGP_LOGO_DATA_URI_PREFIX}${logoBuffer.toString('base64')}`
