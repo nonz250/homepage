@@ -14,6 +14,12 @@ import { ARTICLES_TAG_ROUTE_PREFIX } from './constants/tags'
 import { RSS_FEED_PATH } from './constants/rss'
 import { buildOgpInputs } from './utils/ogp/buildOgpInputs'
 import { writeArticleOgpPngs } from './utils/ogp/writeArticleOgpPngs'
+import { buildOgpFontBuffer } from './utils/ogp/buildOgpFontBuffer'
+import { loadOgpLogoBuffer } from './utils/ogp/loadOgpLogoBuffer'
+import {
+  OGP_FONT_FIXED_CHARACTERS,
+  OGP_FONT_SOURCE_RELATIVE,
+} from './constants/ogpFont'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkZennImage from './utils/markdown/remarkZennImage'
@@ -36,14 +42,40 @@ import {
   OGP_FETCH_MAX_BYTES,
   OGP_FETCH_MAX_REDIRECTS,
   OGP_FETCH_TIMEOUT_MS,
+  OGP_IMAGE_HEIGHT,
+  OGP_IMAGE_WIDTH,
   OGP_USER_AGENT,
 } from './constants/ogp'
+import {
+  DEFAULT_OG_IMAGE_PATH,
+  OGP_IMAGE_MIME_TYPE,
+  SITE_DEFAULT_OG_IMAGE_ALT,
+} from './constants/seo'
+import { assertBaseUrl } from './utils/seo/assertBaseUrl'
+import { buildAbsoluteUrl } from './utils/seo/buildAbsoluteUrl'
 
 // CONTENT_PREVIEW 環境変数を正規化した上で、本番ビルドでは常に無効化する。
 // `normalizePreviewFlag` は純関数なのでここで評価して runtimeConfig に固める。
 const isPreviewEnv = normalizePreviewFlag(process.env.CONTENT_PREVIEW)
 const isProductionBuild = process.env.NODE_ENV === 'production'
 const isContentPreviewEnabled = isPreviewEnv && !isProductionBuild
+
+/**
+ * サイト baseUrl の単一ソース。
+ *
+ * `runtimeConfig.public.baseUrl` と `app.head.meta` の og:image 等を
+ * 全て同一の literal から組み立てるためにトップレベル定数として固める。
+ * production build の検証は `assertBaseUrl` を即時実行することで build 時に
+ * fail-closed する。
+ */
+const SITE_BASE_URL = 'https://nozomi.bike'
+assertBaseUrl(SITE_BASE_URL, { isProduction: isProductionBuild })
+
+/** 既定 OG 画像の絶対 URL (記事ページが上書きしない場合の fallback) */
+const DEFAULT_OG_IMAGE_ABSOLUTE_URL = buildAbsoluteUrl(
+  SITE_BASE_URL,
+  DEFAULT_OG_IMAGE_PATH,
+)
 
 // ES Module 上で __dirname を取得するための定型処理。
 // nuxt.config.ts は Nuxt ランタイム経由で評価されるため、
@@ -166,13 +198,24 @@ const ARTICLES_IMAGES_BASE_URL = '/articles-images'
 const OGP_OUTPUT_SUBDIR = 'ogp'
 
 /**
- * Satori に渡すサブセット化済み Noto Sans JP フォントの絶対パス。
- * `scripts/subset-noto-sans-jp.mjs` で生成する成果物を参照する。
+ * Satori に渡す Noto Sans JP のソースフォント (WOFF) の絶対パス。
+ *
+ * 旧来は subset 済みの woff を public/fonts に commit していたが、
+ * 新規記事タイトルの追従漏れで豆腐化する事故を避けるため、
+ * `nitro:build:public-assets` hook 内で `buildOgpFontBuffer` が
+ * このソース WOFF を読み込んで都度 subset 化する設計に変更した。
  */
-const OGP_FONT_PATH = resolve(
-  __dirname,
-  'public/fonts/noto-sans-jp-subset.woff',
-)
+const OGP_FONT_SOURCE_PATH = resolve(__dirname, OGP_FONT_SOURCE_RELATIVE)
+
+/**
+ * Satori OGP テンプレートの footer に焼き込むロゴ画像 (PNG) の絶対パス。
+ * `loadOgpLogoBuffer` で Buffer を取り、`data:image/png;base64,...` の
+ * data URI に変換して `writeArticleOgpPngs` に渡す。
+ */
+const OGP_LOGO_PATH = resolve(__dirname, 'public/images/nons-labo.png')
+
+/** OGP テンプレートに焼き込むロゴ data URI の MIME prefix */
+const OGP_LOGO_DATA_URI_PREFIX = 'data:image/png;base64,'
 
 /** 予約投稿判定などに用いる prerender 実行時刻は常に現在時刻とする */
 const getBuildTime = (): Date => new Date()
@@ -344,7 +387,7 @@ export default defineNuxtConfig({
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。
       // クライアント側からも参照するため `public` に配置する。
       contentPreview: isContentPreviewEnabled,
-      baseUrl: 'https://nozomi.bike',
+      baseUrl: SITE_BASE_URL,
     },
   },
 
@@ -460,12 +503,32 @@ export default defineNuxtConfig({
       if (entries.length === 0) {
         return
       }
-      const fontBuffer = readFileSync(OGP_FONT_PATH)
+      // 公開対象記事のタイトル文字を集約し、build 時に Noto Sans JP を subset
+      // 化したフォント Buffer を作る。新規記事に subset 漏れの漢字が混じって
+      // 豆腐化する事故を防ぐため、毎回 build 時に再計算する (設計 v2 Step 6)。
+      const fontBuffer = await buildOgpFontBuffer(
+        {
+          entries: entries.map((e) => ({
+            slug: e.slug,
+            title: e.input.title,
+          })),
+          fixedCharacters: OGP_FONT_FIXED_CHARACTERS,
+        },
+        {
+          readSourceFont: () => readFileSync(OGP_FONT_SOURCE_PATH),
+        },
+      )
+      // OGP テンプレートに焼き込む nons-labo ロゴを data URI 化する
+      // (設計 v2 Step 21)。loadOgpLogoBuffer は失敗時に throw するため、
+      // ロゴ抜きの OGP が量産されることはない (fail-closed)。
+      const logoBuffer = loadOgpLogoBuffer(OGP_LOGO_PATH)
+      const logoDataUri = `${OGP_LOGO_DATA_URI_PREFIX}${logoBuffer.toString('base64')}`
       const publicDir: string = nitro.options.output.publicDir
       const outputDir = resolve(publicDir, OGP_OUTPUT_SUBDIR)
       await writeArticleOgpPngs(entries, {
         outputDir,
         fontBuffer,
+        logoDataUri,
         logger: (msg) => console.info(msg),
       })
     },
@@ -488,7 +551,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'https://nozomi.bike' },
+        { name: 'description', content: SITE_BASE_URL },
         { name: 'format-detection', content: 'telephone=no' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:site', content: '@nonz250' },
@@ -496,13 +559,19 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Nozomi Hosaka' },
         { property: 'og:title', content: 'Nozomi Hosaka' },
-        { property: 'og:description', content: 'https://nozomi.bike' },
-        { property: 'og:url', content: 'https://nozomi.bike' },
-        { property: 'og:image', content: 'https://nozomi.bike/images/homepage-ogp.webp' },
-        // `og:image:alt` は Phase 0 以前の "Business card" が残っており、
-        // 現サイトの記事/ポートフォリオ用途と一致しないため削除。記事別の
-        // 動的 alt は後続 Phase で検討する (今は未設定のほうが誤表示より
-        // 安全)。
+        { property: 'og:description', content: SITE_BASE_URL },
+        { property: 'og:url', content: SITE_BASE_URL },
+        // Slack や Twitter / X のクローラは絶対 URL + 寸法 + MIME + alt が
+        // 揃っていることを前提にカードを unfurl する。Step 12 で全項目を
+        // 静的値で固める (動的値は記事ページ側 useSeoMeta で上書き)。
+        { property: 'og:image', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { property: 'og:image:secure_url', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { property: 'og:image:type', content: OGP_IMAGE_MIME_TYPE },
+        { property: 'og:image:width', content: String(OGP_IMAGE_WIDTH) },
+        { property: 'og:image:height', content: String(OGP_IMAGE_HEIGHT) },
+        { property: 'og:image:alt', content: SITE_DEFAULT_OG_IMAGE_ALT },
+        { name: 'twitter:image', content: DEFAULT_OG_IMAGE_ABSOLUTE_URL },
+        { name: 'twitter:image:alt', content: SITE_DEFAULT_OG_IMAGE_ALT },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }

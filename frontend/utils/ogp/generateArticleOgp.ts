@@ -15,12 +15,10 @@
 import satori from 'satori'
 import { Resvg } from '@resvg/resvg-js'
 import type { SafeOgpInput } from '../../types/ogp-input'
-import {
-  createOgpElement,
-  OGP_HEIGHT,
-  OGP_WIDTH,
-} from './ogpTemplate'
+import { createOgpElement } from './ogpTemplate'
+import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '../../constants/ogp'
 import { loadTwemojiSvg } from './loadTwemojiSvg'
+import { normalizeLogoDataUri } from './normalizeLogoDataUri'
 
 /** Satori に渡すフォント設定のデフォルト値 */
 const DEFAULT_FONT_NAME = 'Noto Sans JP'
@@ -48,6 +46,14 @@ export interface GenerateArticleOgpOptions {
   readonly width?: number
   /** 画像の高さ (テスト時のオーバーライド用) */
   readonly height?: number
+  /**
+   * footer 右端に焼き込むロゴ画像の data URI。
+   *
+   * 未指定 / 空文字 / null の場合はロゴなしで描画する。
+   * 内部で `normalizeLogoDataUri` を通すため、許可していない
+   * data URI prefix が来た場合は throw して fail-closed する。
+   */
+  readonly logoDataUri?: string
 }
 
 /**
@@ -61,11 +67,12 @@ export async function generateArticleOgp(
   input: SafeOgpInput,
   options: GenerateArticleOgpOptions,
 ): Promise<Buffer> {
-  const width = options.width ?? OGP_WIDTH
-  const height = options.height ?? OGP_HEIGHT
+  const width = options.width ?? OGP_IMAGE_WIDTH
+  const height = options.height ?? OGP_IMAGE_HEIGHT
   const fontName = options.fontName ?? DEFAULT_FONT_NAME
+  const normalizedLogo = normalizeLogoDataUri(options.logoDataUri)
 
-  const element = createOgpElement(input)
+  const element = createOgpElement(input, { logoDataUri: normalizedLogo })
 
   // Satori は `element` として JSX でも、プレーンオブジェクトでも受け付ける。
   // ここではオブジェクト形式で渡している。
