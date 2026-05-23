@@ -1,0 +1,231 @@
+# Qiita publish pipeline for nonz250/homepage (v5 = B' ローカル運用)
+#
+# 3 job 直列構成:
+#
+#   verify -> qiita-publish -> auto-commit
+#
+# - verify        : main 上の articles/ と public/ が site-articles/ と整合して
+#                   いるか fail-closed で確認する。`scripts/generate.ts` は CI
+#                   側では呼ばず、ユーザーがローカルで `npm run generate` を
+#                   走らせて派生物を同じ commit に同梱する運用 (README 参照)。
+#                   ローカル generate のし忘れはここで検出して publish を止める。
+# - qiita-publish : npm install -g 経由の qiita-cli を直接叩いて Qiita へ publish。
+#                   QIITA_TOKEN は publish step の env スコープにのみ渡す。
+#                   publish 直後に sync で pull された UUID basename と
+#                   public/.remote/ を明示削除し、限定共有記事の漏洩を遮断。
+# - auto-commit   : qiita-cli が `public/<slug>.md` に書き戻した記事 ID の差分
+#                   のみを [skip ci] 付きで push する。main の branch ruleset
+#                   (pull_request 必須) を bypass するため、リポジトリ専用
+#                   Deploy key (`AUTO_COMMIT_DEPLOY_KEY`、ruleset bypass actors
+#                   に actor_type: DeployKey で登録済み) で SSH push する。
+#                   Deploy key の push は GITHUB_TOKEN と違って他ワークフロー
+#                   を起動し得るが、commit message の `[skip ci]` が主防御。
+#                   publish-qiita.yml の paths には `public/**` を含めるため、
+#                   従来の paths による self-loop 防御は成立しない (代わりに
+#                   [skip ci] で塞ぐ)。
+#
+# fork PR ガード:
+#   各 job の先頭 if で fork からの PR を弾く。push トリガーは base 側の
+#   リポジトリからしか動かないが、workflow_dispatch を fork から呼ばれる
+#   経路を将来考慮して明示的にガードする。
+#
+# SHA pin:
+#   外部 action は 40 文字の commit SHA に固定する。タグコメントを
+#   右端に付記してバージョンを人間可読に保つ。
+#     actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5         # v4
+#     actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020       # v4
+#     actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+#     actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+#
+#   qiita-cli は npm install -g @qiita/qiita-cli@1.8.0 で固定バージョン導入。
+
+name: Publish to Qiita
+
+on:
+  push:
+    branches:
+      - main
+    # paths は allowlist。コンテンツ系 (= ローカル generate 結果が乗る public/)
+    # と generator/アサーション関連のみ。`articles/` は Zenn 用なので除外、
+    # `site-articles/` 単独変更は public/ 差分を伴う前提のため allowlist から
+    # 落とす (= 取りこぼし時は verify が落ちる)。
+    paths:
+      - 'public/**'
+      - 'scripts/**'
+      - '.github/workflows/publish-qiita.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  # auto-commit job が public/ の id 差分を push するために必要。
+  contents: write
+
+concurrency:
+  # 同一 ref での publish を直列化する。cancel-in-progress: false で、進行中の
+  # publish を後続が kill して中途半端な Qiita 公開を残さないようにする。
+  group: publish-qiita-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify generated articles/public are in sync with site-articles
+    # fork PR / fork workflow_dispatch ガード。
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        # postinstall 起点の任意コード実行を避けるため --ignore-scripts を明示。
+        run: npm ci --ignore-scripts
+
+      - name: Assert site-articles frontmatter size
+        run: bash scripts/assert-frontmatter-size.sh site-articles
+
+      - name: Verify generated frontmatter round-trip
+        # main 上の articles/ と public/ が site-articles と整合しているかを
+        # fail-closed で検査する。ローカル generate のし忘れはここで落ちる。
+        run: npm run verify:generated
+
+      - name: Assert forbidden patterns are absent
+        run: npm run assert:forbidden-patterns
+
+      - name: Assert public allowlist
+        run: npm run assert:public-allowlist
+
+      - name: Assert no leaked Qiita drafts
+        run: npm run assert:no-qiita-leaked-drafts
+
+  qiita-publish:
+    name: Publish to Qiita via qiita-cli
+    needs: verify
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.x'
+
+      - name: Remove stale qiita-cli remote cache
+        # 前回実行が残した public/.remote を除去する (サーバ側 state の複製が
+        # 古い commit SHA とズレるのを避ける)。初回は存在しない想定。
+        run: rm -rf public/.remote
+
+      - name: Install qiita-cli
+        # 公式 composite action (increments/qiita-cli/actions/publish) は最後に
+        # `git add ./public/*` を実行するが、当リポジトリは .gitignore で
+        # `/public/[a-f0-9]*.md` (Qiita 上の既存記事の UUID basename) を除外し
+        # ているため、composite action の git add が exit 1 になる。
+        # composite action 内部の publish コマンドだけを直接実行する。
+        run: npm install -g @qiita/qiita-cli@1.8.0
+
+      - name: Publish articles to Qiita
+        # QIITA_TOKEN は本 step の env に限定。他 step には漏らさない。
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+        run: qiita publish --all --root .
+
+      - name: Remove synced UUID drafts and remote cache
+        # qiita publish は内部で sync-articles-from-qiita を走らせ、Qiita 上の
+        # 既存記事 (限定共有含む可能性あり) を `public/<uuid>.md` に pull する。
+        # 限定共有記事の漏洩を防ぐため、UUID basename と public/.remote/ を
+        # auto-commit 前に必ず削除する (.gitignore + この削除で二重防御)。
+        run: |
+          find public -maxdepth 1 -type f -regextype posix-extended -regex '.*/[a-f0-9]+\.md$' -print -delete || true
+          rm -rf public/.remote
+
+      - name: Upload published public/ (with qiita ids written back)
+        # qiita-cli は publish 成功時にレスポンスの記事 ID を public/<slug>.md の
+        # フロントマター `id` フィールドに書き戻す。この変更を auto-commit job に
+        # 受け渡さないと、リポジトリには id 空のまま残り、次回 publish で再び
+        # 新規記事として作成されてしまう (Qiita 上に同一記事が量産される)。
+        # UUID drafts 削除と public/.remote 除去後の状態を artifact 化することで、
+        # 漏洩リスクを避けつつ id 書き戻しのみを永続化する。
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-public
+          path: public/
+          if-no-files-found: warn
+          retention-days: 7
+          # public/.allowlist を含めるため hidden files を許可。
+          include-hidden-files: true
+
+  auto-commit:
+    name: Commit qiita ids back to main
+    needs: qiita-publish
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          # main の branch ruleset (pull_request 必須) を bypass するため、
+          # GITHUB_TOKEN ではなくリポジトリ専用 Deploy key (write 権限つき) で
+          # SSH push する。`actions/checkout` の `ssh-key` パラメータは SSH agent
+          # を立てて origin を git@github.com 経路に書き換えるため、後続の
+          # `git pull --rebase` と `git push` がそのまま SSH 経由で走る。
+          ssh-key: ${{ secrets.AUTO_COMMIT_DEPLOY_KEY }}
+
+      - name: Pull latest (defensive rebase)
+        # 並列 push (人手コミット等) が来ても衝突しないよう保険として rebase。
+        # rebase 失敗時は fail させて人間に委ねる (勝手に上書きしない)。
+        # download-artifact より前に実行する: artifact が public/ の tracked
+        # file を上書きすると unstaged changes として認識され、
+        # `git pull --rebase` が exit 128 で失敗するため。
+        run: git pull --rebase origin "${GITHUB_REF_NAME}"
+
+      - name: Download published public/ (qiita ids)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: published-public
+          path: .published-public/
+
+      - name: Overlay qiita-written-back ids onto public/
+        # qiita-cli が id を書き戻した public/<slug>.md を main の public/ に
+        # 上書きする。同名ファイルは published-public 側が後勝ち。
+        run: |
+          cp -a .published-public/. public/
+          rm -rf .published-public
+
+      - name: Configure git identity
+        # github-actions[bot] を commit 主体にする。user.email は GitHub 推奨
+        # の noreply アドレス。
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Commit and push qiita id diff
+        # public/ (allowlist 含む) の未 commit 差分のみ commit。
+        # [skip ci] で publish-qiita.yml と deploy.yml の自己ループを抑制する。
+        # publish-qiita.yml は paths に `public/**` を含むため、`[skip ci]` が
+        # 無いと auto-commit の push で再起動してしまう。
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          git add -- public
+          if git diff --staged --exit-code --quiet; then
+            echo "no diff to commit"
+            exit 0
+          fi
+          git commit -m "chore(content): sync qiita ids from ${SOURCE_SHA} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
