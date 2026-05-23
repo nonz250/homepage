@@ -388,6 +388,8 @@ export default defineNuxtConfig({
       // クライアント側からも参照するため `public` に配置する。
       contentPreview: isContentPreviewEnabled,
       baseUrl: SITE_BASE_URL,
+      // GTM コンテナ ID。未設定時は空文字フォールバック、plugins/gtm.client.ts 側で fail-closed。
+      gtmId: process.env.NUXT_PUBLIC_GTM_ID ?? '',
     },
   },
 
