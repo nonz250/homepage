@@ -31,7 +31,7 @@
     "http-server": "^14.1.1",
     "katex": "^0.16.45",
     "material-icons": "^1.13.1",
-    "nuxt": "^3.19.0",
+    "nuxt": "^3.21.6",
     "open-graph-scraper": "^6.11.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
