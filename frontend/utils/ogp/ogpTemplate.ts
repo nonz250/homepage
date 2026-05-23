@@ -68,7 +68,7 @@ const EMOJI_FONT_SIZE = 96
 /** サイト名のフォントサイズ (px) */
 const FOOTER_FONT_SIZE = 28
 
-/** footer に焼き込むロゴ (`<img>`) の幅 (px)。square アイコン (512x512) を縮小 */
+/** footer に焼き込むロゴ (`<img>`) の幅 (px)。square アイコン (1024x1024) を縮小 */
 const OGP_LOGO_WIDTH = 128
 
 /** footer に焼き込むロゴの高さ (px)。square なので幅と同値 */
