@@ -37,21 +37,6 @@ export interface SatoriElement {
 }
 
 /**
- * OGP の画像サイズ (幅)。
- *
- * 真値は `constants/ogp.ts` (`OGP_IMAGE_WIDTH`) に置く。本モジュールでは
- * 既存の import 経路 (`from './ogpTemplate'`) を破壊しないために
- * re-export を残してある。設計 v2 Step 9。
- */
-export const OGP_WIDTH = OGP_IMAGE_WIDTH
-
-/**
- * OGP の画像サイズ (高さ)。
- * 真値は `constants/ogp.ts` (`OGP_IMAGE_HEIGHT`)。
- */
-export const OGP_HEIGHT = OGP_IMAGE_HEIGHT
-
-/**
  * 左端アクセント線の色 (テーマカラー / nons-labo ブランドカラー)。
  *
  * 設計 v2 Step 22 で `#2563eb` から nons-labo の色 `#3d50b7` に切り替えた。
@@ -274,8 +259,8 @@ export function createOgpElement(
     type: 'div',
     props: {
       style: {
-        width: `${OGP_WIDTH}px`,
-        height: `${OGP_HEIGHT}px`,
+        width: `${OGP_IMAGE_WIDTH}px`,
+        height: `${OGP_IMAGE_HEIGHT}px`,
         display: 'flex',
         flexDirection: 'row',
         background: BACKGROUND_COLOR,
