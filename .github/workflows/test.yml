@@ -181,6 +181,12 @@ jobs:
       - name: Assert no external images in build output
         working-directory: ${{ github.workspace }}
         run: bash scripts/assert-no-external-images.sh
+      # Slack の Link Expanding は head 先頭 8KB しか fetch しないため、
+      # 記事ページの OGP meta が `<style>` より前 & 先頭 8KB 以内に出ているか
+      # を generate 産物に対して直接検証する。`integration` job は generate
+      # に非依存なので、ここで artifact upload 前に同 runner で済ませる。
+      - name: Assert slack unfurl head order
+        run: npx vitest run tests/integration/prerender/articleSlackUnfurlOrder.test.ts
       - name: Upload generated public/
         uses: actions/upload-artifact@v4
         with:
