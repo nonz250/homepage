@@ -2,11 +2,54 @@
 
 個人サイト ([nozomi.bike](https://nozomi.bike)) と Zenn を兼ねるリポジトリ。
 
-## Qiita 連携 (v4 コンテンツパイプライン)
+## ローカルでの記事編集フロー (v5 ローカル運用)
+
+`site-articles/*.md` を編集したら、必ず手元で `npm run generate` (root) を
+回し、派生生成物 (`articles/` `public/`) を**同じ commit (または PR)** に
+同梱して main に push する。CI 側では generator を呼ばないので、ローカル
+generate のし忘れは publish-qiita.yml の verify ジョブで fail-closed に
+落ちる (`npm run verify:generated` 等)。
+
+### 基本フロー
+
+1. `site-articles/<slug>.md` を編集
+2. リポジトリ root で `npm run generate`
+3. `articles/` と `public/` の差分を確認 (`git diff articles public`)
+4. site-articles と articles/public をまとめて 1 commit にして push
+
+### 画像を追加するとき
+
+`scripts/generate.ts` は記事中の画像参照を
+`https://raw.githubusercontent.com/<owner>/<repo>/<sha>/...` の永続 URL に
+書き換える (Qiita 側に限る。Zenn / 本サイトは相対のまま)。`<sha>` は generator
+実行時のローカル HEAD の commit SHA。**画像が存在しないコミットに URL が
+向くと Qiita 表示で 404 になる**ため、次の順序を守る。
+
+1. 画像ファイルと site-articles の本文を**先に commit** する
+2. その commit の HEAD 上で `npm run generate` を回す
+3. 出力された articles/public を `git commit --amend` で同じコミットに統合する
+
+これで `<sha>` は画像が存在するコミットを指す。
+
+### CI 側の責務 (v5)
+
+| Workflow | 役割 | 起動条件 (paths) |
+| --- | --- | --- |
+| `.github/workflows/publish-qiita.yml` | verify (整合性 fail-closed) → qiita-cli publish → 記事 ID の auto-commit | `public/**`, `scripts/**`, `package*.json` 等 |
+| `.github/workflows/deploy.yml` | Nuxt SSG (`nuxt generate`) → rsync で本番 nginx に配布 | `frontend/**`, `articles/**`, `site-articles/**`, `scripts/**`, `infra/**` 等 |
+| `.github/workflows/test.yml` | 既存 (typecheck / unit / integration / contract / generate / e2e / security-headers) | 変更なし |
+
+`publish-qiita.yml` の auto-commit ジョブが書き戻す `public/<slug>.md` の
+記事 ID 差分は commit message に `[skip ci]` を付けて自己ループを防ぐ。
+push 経路は Deploy key (`AUTO_COMMIT_DEPLOY_KEY`、main の branch ruleset を
+bypass するために登録) 経由の SSH。
+
+## Qiita 連携
 
 Qiita 側の記事は `public/*.md` として generator (`scripts/generate.ts`) が
-`site-articles/*.md` から**ビルド時に派生生成**する。`public/*.md` を手で
-編集してはいけない (generator 実行時に上書き破棄される)。
+`site-articles/*.md` から**ローカル実行時に派生生成**する。CI 側では
+generator を呼ばない。`public/*.md` を手で編集してはいけない (generator
+実行時に上書き破棄される)。
 
 ### `qiita.config.json` の意味論
 

@@ -6,7 +6,7 @@ tags:
   - MCP
   - pokemon
 private: false
-updated_at: '2026-05-01T18:32:54+09:00'
+updated_at: '2026-05-23T08:34:36+09:00'
 id: 9f154dc9bc947266cb82
 organization_url_name: null
 slide: false

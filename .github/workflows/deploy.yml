@@ -1,59 +1,92 @@
-name: Deploy homepage (manual backup)
-
-# v4 の標準経路では publish.yml の deploy job が main push を起点に deploy
-# まで完走する。このワークフローは publish.yml パイプライン全体が deploy
-# 前で停止した場合の **手動バックアップ** として残す。
+# Deploy pipeline for nozomi.bike (v5 = B' ローカル運用)
 #
-# 通常経路 (main push) では起動しないよう workflow_dispatch 専用にする。
-# 必要になったら GitHub UI の "Run workflow" から手動トリガーする。
+# 単一 job 構成: checkout -> nuxt build -> assert -> rsync。
+#
+# `scripts/generate.ts` は CI 側では呼ばない (ローカル運用)。本ワークフローは
+# 既に main にコミットされた `articles/` `public/` を SSOT として信頼し、
+# Nuxt SSG (`npm run generate` = nuxt generate) で `.output/public/` を生成して
+# rsync で本番 nginx に配布する。
+#
+# fork PR ガード:
+#   先頭 if で fork からの PR を弾く。push トリガーは base 側のリポジトリ
+#   からしか動かないが、workflow_dispatch を fork から呼ばれる経路を将来
+#   考慮して明示的にガードする。
+#
+# SHA pin:
+#   外部 action は 40 文字の commit SHA に固定する。
+#     actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5         # v4
+#     actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020       # v4
+#     webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd     # v0.9.1
+
+name: Deploy homepage
 
 on:
+  push:
+    branches:
+      - main
+    # paths は allowlist。Nuxt SSG が読む入力 (frontend, articles, site-articles)
+    # と、build 時に動作するスクリプト群 (scripts) と、本番 nginx 設定 (infra)
+    # を含める。`public/**` は Qiita 専用派生で SSG は読まないため除外する
+    # ことで、publish-qiita.yml の auto-commit (= public のみ更新する push)
+    # が deploy を起動しないようにする (= `[skip ci]` と二重防御)。
+    paths:
+      - 'frontend/**'
+      - 'articles/**'
+      - 'site-articles/**'
+      - 'scripts/**'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# 手動連打で deploy が二重起動すると rsync が同一ホストに重なり、
-# 本番側のファイルが中途半端な state になる恐れがある。直列化のみ
-# 行い、進行中の deploy は最後まで走らせる (cancel-in-progress: false)。
-# publish.yml と同じ「副作用ありの job は cancel しない」方針。
+# 手動連打 / 連続 push で deploy が二重起動すると rsync が同一ホストに重なり、
+# 本番側のファイルが中途半端な state になる恐れがある。直列化のみ行い、
+# 進行中の deploy は最後まで走らせる (cancel-in-progress: false)。
 concurrency:
-  group: deploy-manual-${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
+    name: Nuxt SSG and rsync to production nginx
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24.x'
 
-      # postinstall 起点の任意コード実行リスクを避けるため `--ignore-scripts`
-      # を明示する。test.yml と同じ supply chain 対策を deploy にも適用。
-      - name: Install Dependencies
+      - name: Install frontend dependencies
         run: npm ci --ignore-scripts
 
-      # Nuxt Content v3 は better-sqlite3 の native binding を必要とする。
-      # `--ignore-scripts` で install 時の prebuild がスキップされるため、
-      # この 1 パッケージだけを明示的に rebuild する。
       - name: Rebuild better-sqlite3 (Nuxt Content native binding)
+        # Nuxt Content v3 は better-sqlite3 の native binding を必要とする。
+        # `--ignore-scripts` で install 時の prebuild がスキップされるため、
+        # この 1 パッケージだけを明示的に rebuild する。
         run: npm rebuild better-sqlite3
 
-      # `nuxt prepare` は `.nuxt` 配下の型ファイルを生成する必須ステップ。
-      # `--ignore-scripts` で postinstall を skip した分をここで明示実行する。
       - name: Nuxt prepare (generate .nuxt types)
+        # `nuxt prepare` は `.nuxt` 配下の型ファイルを生成する必須ステップ。
+        # `--ignore-scripts` で postinstall を skip した分をここで明示実行する。
         run: npm run prepare
 
-      - name: Build (generate)
+      - name: Nuxt generate (static build)
+        # frontend/ の `npm run generate` は `nuxt generate` (= SSG)。
+        # root の `npm run generate` (= scripts/generate.ts) ではないので注意。
         run: npm run generate
 
       - name: Assert no drafts in build output
@@ -64,14 +97,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: bash scripts/assert-no-external-images.sh
 
-      - name: Deploy Directories
-        run: ls -al
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: SSH key generate
-        run: |
-          mkdir -p ~/.ssh/
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-      - name: Deploy
-        run: rsync -ahvz --delete -e "ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:www/homepage --include-from="../.github/rsync_include.txt" --exclude-from="../.github/rsync_exclude.txt"
+      - name: Deploy via rsync
+        # host key は手動受容 (UserKnownHostsFile=/dev/null) で維持。
+        # 将来的に known_hosts ピン留めを導入する場合は別 PR で扱う。
+        run: >-
+          rsync -ahvz --delete
+          -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+          ./
+          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:www/homepage
+          --include-from="../.github/rsync_include.txt"
+          --exclude-from="../.github/rsync_exclude.txt"
