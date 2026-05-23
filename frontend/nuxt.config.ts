@@ -212,7 +212,7 @@ const OGP_FONT_SOURCE_PATH = resolve(__dirname, OGP_FONT_SOURCE_RELATIVE)
  * `loadOgpLogoBuffer` で Buffer を取り、`data:image/png;base64,...` の
  * data URI に変換して `writeArticleOgpPngs` に渡す。
  *
- * favicon (`/favicon.ico` の元) と同一 PNG (512x512 square) を共用するため、
+ * favicon (`/favicon.ico` の元) と同一 PNG (1024x1024 square) を共用するため、
  * 差し替え時は OGP 画像への影響も併せて確認すること。
  */
 const OGP_LOGO_PATH = resolve(__dirname, 'public/icon.png')

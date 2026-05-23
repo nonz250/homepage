@@ -22,7 +22,7 @@ const EXPECTED_HEIGHT = 630
 /** Step 22 で nons-labo ブランドカラーに切り替えたテーマ色 */
 const EXPECTED_ACCENT_COLOR = '#3d50b7'
 
-/** ロゴ寸法 (icon.png 512x512 square を縮小) */
+/** ロゴ寸法 (icon.png 1024x1024 square を縮小) */
 const EXPECTED_LOGO_WIDTH = 128
 const EXPECTED_LOGO_HEIGHT = 128
 
