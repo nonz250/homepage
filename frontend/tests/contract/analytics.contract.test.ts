@@ -50,23 +50,23 @@ describe('NUXT_PUBLIC_GTAG_ID -> runtimeConfig.public.gtagId contract', () => {
 })
 
 describe('analytics gating contract (runtime + id)', () => {
-  it('is disabled when gtagId is empty even in production build', () => {
+  it('is disabled when gtmId is empty even in production build', () => {
     // NUXT_PUBLIC_GTAG_ID 未設定の本番ビルドでも GA を起動させない契約。
     expect(
-      isAnalyticsEnabled({ nodeEnv: 'production', gtagId: '' }),
+      isAnalyticsEnabled({ nodeEnv: 'production', gtmId: '' }),
     ).toBe(false)
   })
 
   it('is disabled when NODE_ENV is development even with a valid id', () => {
     // ローカル / PR プレビューでの計測汚染を防ぐ契約。
     expect(
-      isAnalyticsEnabled({ nodeEnv: 'development', gtagId: 'G-ABCDEF1234' }),
+      isAnalyticsEnabled({ nodeEnv: 'development', gtmId: 'GTM-ABCDEF' }),
     ).toBe(false)
   })
 
   it('is enabled only when both production build and valid id are present', () => {
     expect(
-      isAnalyticsEnabled({ nodeEnv: 'production', gtagId: 'G-ABCDEF1234' }),
+      isAnalyticsEnabled({ nodeEnv: 'production', gtmId: 'GTM-ABCDEF' }),
     ).toBe(true)
   })
 })

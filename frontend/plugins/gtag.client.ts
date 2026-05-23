@@ -1,5 +1,5 @@
 import { isAnalyticsEnabled } from '../utils/analytics/isAnalyticsEnabled'
-import { buildGtagScriptSrc } from '../utils/analytics/buildGtagScriptSrc'
+import { buildGtmScriptSrc } from '../utils/analytics/buildGtmScriptSrc'
 
 /**
  * GA4 (gtag.js) クライアントプラグイン。
@@ -44,7 +44,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   // 別途配る必要はない。
   const nodeEnv = process.env.NODE_ENV
 
-  if (!isAnalyticsEnabled({ nodeEnv, gtagId })) {
+  if (!isAnalyticsEnabled({ nodeEnv, gtmId: gtagId })) {
     return
   }
 
@@ -64,7 +64,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const script = document.createElement('script')
   script.async = true
-  script.src = buildGtagScriptSrc(gtagId)
+  script.src = buildGtmScriptSrc(gtagId)
   document.head.appendChild(script)
 
   let lastSentPath: string | null = null
