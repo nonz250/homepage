@@ -18,13 +18,17 @@
  *   - 背景: 白 (solid color)
  *   - 左端にアクセント縦線 (32px 幅)
  *   - 左上: 絵文字 (emoji があるときのみ)
- *   - 中央: タイトル (2 行まで、ellipsis)
+ *   - 中央: タイトル (`wrapOgpTitle` で算出した行ごとに `<div>` を並べる)
  *   - 左下: サイト名 (Nozomi Hosaka)
  *   - 右下: 日付
  */
 import { SITE_TITLE } from '../../constants/rss'
 import { OGP_IMAGE_HEIGHT, OGP_IMAGE_WIDTH } from '../../constants/ogp'
 import type { SafeOgpInput } from '../../types/ogp-input'
+import {
+  wrapOgpTitle,
+  OGP_TITLE_LINE_HEIGHT_RATIO,
+} from './wrapOgpTitle'
 
 /** Satori が受け付ける element オブジェクトの最小型 */
 export interface SatoriElement {
@@ -57,9 +61,6 @@ const ACCENT_WIDTH = 32
 
 /** 全体のパディング (px) */
 const CONTENT_PADDING = 80
-
-/** タイトルのフォントサイズ (px) */
-const TITLE_FONT_SIZE = 64
 
 /** 絵文字のフォントサイズ (px) */
 const EMOJI_FONT_SIZE = 96
@@ -122,22 +123,34 @@ export function createOgpElement(
       }
     : null
 
+  const titleContentWidthPx =
+    OGP_IMAGE_WIDTH - ACCENT_WIDTH - CONTENT_PADDING * 2
+  const wrapped = wrapOgpTitle(input.title, {
+    contentWidthPx: titleContentWidthPx,
+  })
+  const titleLineHeightPx = Math.round(
+    wrapped.fontSizePx * OGP_TITLE_LINE_HEIGHT_RATIO,
+  )
+  const titleLineElements: SatoriElement[] = wrapped.lines.map((line) => ({
+    type: 'div',
+    props: {
+      style: {
+        fontSize: `${wrapped.fontSizePx}px`,
+        fontWeight: 700,
+        lineHeight: `${titleLineHeightPx}px`,
+        color: TEXT_COLOR,
+      },
+      children: line,
+    },
+  }))
   const titleBlock: SatoriElement = {
     type: 'div',
     props: {
       style: {
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-        fontSize: `${TITLE_FONT_SIZE}px`,
-        fontWeight: 700,
-        lineHeight: 1.3,
-        color: TEXT_COLOR,
-        // Satori では `text-overflow: ellipsis` は line-clamp と合わせて働く。
-        textOverflow: 'ellipsis',
+        display: 'flex',
+        flexDirection: 'column',
       },
-      children: input.title,
+      children: titleLineElements,
     },
   }
 

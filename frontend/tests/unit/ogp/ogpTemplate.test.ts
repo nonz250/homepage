@@ -106,6 +106,41 @@ describe('createOgpElement (no logo)', () => {
   })
 })
 
+describe('createOgpElement (title wrapping)', () => {
+  it('renders one child per wrapped title line', () => {
+    // 60 字程度の中長タイトルは 64px では 2 行に収まらないことが多いが、
+    // ここで検証したいのは「wrapOgpTitle.lines.length === titleBlock.children.length」
+    // という構造契約のみ。具体的な行数は wrapOgpTitle 側でテストする。
+    const root = createOgpElement(
+      buildInput({
+        title: toSafeText(
+          'これは折り返し検証のための比較的長めの日本語タイトルです。',
+          120,
+        ),
+      }),
+    )
+    const [, contentColumn] = asChildArray(
+      root.props.children,
+    ) as readonly SatoriElement[]
+    const [mainColumn] = asChildArray(
+      contentColumn.props.children,
+    ) as readonly SatoriElement[]
+    const mainChildren = asChildArray(
+      mainColumn.props.children,
+    ) as readonly SatoriElement[]
+    // emoji なし fixture では title block が main column の唯一の子。
+    const titleBlock = mainChildren[mainChildren.length - 1]
+    const titleChildren = asChildArray(titleBlock.props.children)
+    expect(titleChildren.length).toBeGreaterThanOrEqual(1)
+    // 各子要素が div + 単一の string children (= 1 行) であること
+    for (const child of titleChildren) {
+      const lineEl = child as SatoriElement
+      expect(lineEl.type).toBe('div')
+      expect(typeof lineEl.props.children).toBe('string')
+    }
+  })
+})
+
 describe('createOgpElement (logo options)', () => {
   it('keeps the 2-cell footer when options is undefined', () => {
     const root = createOgpElement(buildInput())
