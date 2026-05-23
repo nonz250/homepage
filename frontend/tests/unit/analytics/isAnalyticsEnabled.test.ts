@@ -5,15 +5,7 @@ import {
 } from '../../../utils/analytics/isAnalyticsEnabled'
 
 /**
- * GTM 有効化判定 (`isAnalyticsEnabled`) の単体テスト。
- *
- * `plugins/gtm.client.ts` が本関数の真偽値に基づいて gtm.js の読み込みを
- * 分岐させるため、次を契約として固定する:
- *   - 本番ビルド (NODE_ENV=production) かつ有効な GTM container ID
- *     (`GTM-XXXXXX`) が渡されたときのみ true
- *   - 開発ビルドでは ID があっても false (ローカル開発で計測汚染しない)
- *   - ID 未設定 / 形式不正は本番ビルドでも false (fail-closed)
- *   - 前後空白や末尾改行は trim で吸収する (secret 由来の事故防止)
+ * 本関数の真偽値が plugins/gtm.client.ts の <script> 読み込み分岐を決める。
  */
 
 describe('isValidGtmContainerId', () => {

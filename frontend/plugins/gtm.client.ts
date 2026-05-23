@@ -1,4 +1,3 @@
-// `.client` サフィックスにより SSR 評価対象外。
 import { isAnalyticsEnabled } from '../utils/analytics/isAnalyticsEnabled'
 import { buildGtmScriptSrc } from '../utils/analytics/buildGtmScriptSrc'
 

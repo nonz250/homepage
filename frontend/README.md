@@ -64,4 +64,10 @@ GitHub Actions の Repository Settings > Secrets and variables > Actions に `NU
 
 ### CSP について
 
-nginx の `infra/nginx/conf.d/_security-map.conf` で `www.googletagmanager.com` が `script-src` / `img-src` / `connect-src` に許可済み。GTM 経由 GA4 でも追加変更は不要。`'unsafe-inline'` 依存は GTM の DOM 注入実装上必要となる。SRI は GTM の動的配信特性上適用不可。noscript iframe は非実装。
+nginx の `infra/nginx/conf.d/_security-map.conf` で `www.googletagmanager.com` が `script-src` / `img-src` / `connect-src` に許可済み。GTM 経由 GA4 でも追加変更は不要。
+
+現状の制約と理由は次のとおり。
+
+- `'unsafe-inline'` 依存は GTM が `<script>` 注入時に nonce 適用経路を持たないため
+- SRI は GTM コンテナ更新の都度 hash が変わるため適用不可
+- noscript iframe は SPA で JavaScript 必須前提のため省略

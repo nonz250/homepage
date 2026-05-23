@@ -2,12 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { buildGtmScriptSrc } from '../../../utils/analytics/buildGtmScriptSrc'
 
 /**
- * `buildGtmScriptSrc` の単体テスト。
- *
- * GTM gtm.js の配信 URL を組み立てる純関数の契約を固定する:
- *   - origin / path 部分は固定 (www.googletagmanager.com/gtm.js)
- *   - `id` クエリは正しく URL エンコードされる
- *   - 空文字やエスケープ対象文字が渡っても URL が破綻しないこと
+ * isValidGtmContainerId が事前検証する前提だが、任意文字が紛れた場合に
+ * URL が破綻しないよう URLSearchParams で組む。
  */
 
 describe('buildGtmScriptSrc', () => {
