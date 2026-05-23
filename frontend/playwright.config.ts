@@ -18,6 +18,10 @@ const WEB_SERVER_TIMEOUT_MS = 120_000
  * 前提: 事前に `npm run generate` が成功し、.output/public/ が存在すること。
  * webServer は既に .output が無い場合は失敗するが、CI 側で generate を先に
  * 回すためこれを許容する。
+ *
+ * projects には desktop (`chromium`) と mobile (`mobile-chrome`) を含める。
+ * Issue #57 のモバイル回帰検知用として、Pixel 5 相当の viewport で
+ * 横スクロールが発生していないかを責務とする。
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -42,5 +46,6 @@ export default defineConfig({
       },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
   ],
 })

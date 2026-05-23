@@ -26,7 +26,8 @@ defineProps<{
 @use "assets/scss/size";
 
 .v-Service {
-  width: size.$item-size;
+  width: 100%;
+  max-width: size.$item-size;
 }
 
 .icon {

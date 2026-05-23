@@ -370,7 +370,9 @@ onBeforeUnmount(() => {
     margin-top: 1rem;
     display: grid;
     gap: .5rem;
-    grid-template-columns: repeat(auto-fit, minmax(size.$item-size, 1fr));
+    // `minmax(min(100%, item-size), 1fr)` で、親より狭い端末でも
+    // トラック幅が親を超えて横スクロールを誘発しないようにする。
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, size.$item-size), 1fr));
 
     > p {
       margin: 0;
@@ -405,10 +407,20 @@ onBeforeUnmount(() => {
   padding: 0;
   font-size: 2rem;
   font-weight: normal;
+  overflow-wrap: anywhere;
+
+  @media screen and (max-width: size.$breakpoint-mobile) {
+    font-size: 1.6rem;
+  }
 
   &-en {
     margin: 0 1rem 0 0;
     font-size: 1.5rem;
+    overflow-wrap: anywhere;
+
+    @media screen and (max-width: size.$breakpoint-mobile) {
+      font-size: 1.2rem;
+    }
   }
 }
 
@@ -417,7 +429,9 @@ onBeforeUnmount(() => {
     padding-bottom: 2rem;
     display: grid;
     gap: 2rem;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    // モバイル端末 (〜375px) ではトラック幅 330px が親幅を超え
+    // 横スクロールを誘発するため、`min(100%, 330px)` で親幅に収める。
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
     justify-items: center;
   }
 
