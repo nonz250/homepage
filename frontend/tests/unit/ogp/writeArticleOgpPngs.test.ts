@@ -40,7 +40,6 @@ describe('writeArticleOgpPngs', () => {
       const fontBuffer = readFileSync(FONT_PATH)
       const buildInput = (t: string): SafeOgpInput => ({
         title: toSafeText(t, 120),
-        date: toSafeText('2026-04-18', 32),
         tags: [],
         theme: 'light',
       })
@@ -70,7 +69,6 @@ describe('writeArticleOgpPngs', () => {
         slug: 'alpha',
         input: {
           title: toSafeText('Nested', 120),
-          date: toSafeText('', 32),
           tags: [],
           theme: 'light' as const,
         },

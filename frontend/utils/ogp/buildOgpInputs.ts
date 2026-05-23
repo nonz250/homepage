@@ -22,9 +22,6 @@ import {
 /** タイトルの最大長 (OGP_TITLE_MAX_LENGTH と揃える余地もあるが、描画崩れ抑止のため短め) */
 const OGP_INPUT_TITLE_MAX = 120
 
-/** 日付文字列の最大長 (YYYY-MM-DD + 余白) */
-const OGP_INPUT_DATE_MAX = 32
-
 /** 1 個の tag 最大長 */
 const OGP_INPUT_TAG_MAX = 32
 
@@ -98,34 +95,14 @@ function articleToSafeInput(article: OgpSourceArticle): SafeOgpInput {
     article.title || article.slug,
     OGP_INPUT_TITLE_MAX,
   )
-  const date: SafeText = toSafeText(
-    formatDate(article.published_at),
-    OGP_INPUT_DATE_MAX,
-  )
   const emoji: SafeText | undefined =
     typeof article.emoji === 'string' && article.emoji.length > 0
       ? toSafeText(article.emoji, OGP_INPUT_EMOJI_MAX)
       : undefined
   return {
     title,
-    date,
     tags,
     emoji,
     theme: 'light',
   }
-}
-
-/**
- * published_at (ISO 文字列) を YYYY-MM-DD に整形する。
- * 不正値や未指定は空文字。
- */
-function formatDate(raw: string | undefined): string {
-  if (!raw) return ''
-  const ms = Date.parse(raw)
-  if (Number.isNaN(ms)) return ''
-  const d = new Date(ms)
-  const yyyy = d.getUTCFullYear().toString().padStart(4, '0')
-  const mm = (d.getUTCMonth() + 1).toString().padStart(2, '0')
-  const dd = d.getUTCDate().toString().padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
 }

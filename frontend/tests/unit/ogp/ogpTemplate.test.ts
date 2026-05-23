@@ -22,9 +22,9 @@ const EXPECTED_HEIGHT = 630
 /** Step 22 で nons-labo ブランドカラーに切り替えたテーマ色 */
 const EXPECTED_ACCENT_COLOR = '#3d50b7'
 
-/** Step 18-19 で確定するロゴ寸法 (アスペクト比 500:263 維持) */
-const EXPECTED_LOGO_WIDTH = 96
-const EXPECTED_LOGO_HEIGHT = 50
+/** ロゴ寸法 (icon.png 512x512 square を縮小) */
+const EXPECTED_LOGO_WIDTH = 128
+const EXPECTED_LOGO_HEIGHT = 128
 
 /** ロゴ用のダミー data URI */
 const DUMMY_LOGO_DATA_URI = 'data:image/png;base64,AAAA'
@@ -35,16 +35,15 @@ const ROOT_CHILD_COUNT = 2
 /** content column の直下は main column + footer row の 2 要素 */
 const CONTENT_COLUMN_CHILD_COUNT = 2
 
-/** logo なしの footer は「サイト名 / 日付」の 2 要素 */
-const FOOTER_CHILD_COUNT_WITHOUT_LOGO = 2
+/** logo なしの footer はサイト名のみの 1 要素 */
+const FOOTER_CHILD_COUNT_WITHOUT_LOGO = 1
 
-/** logo ありの footer は「サイト名 / 日付 / ロゴ」の 3 要素 */
-const FOOTER_CHILD_COUNT_WITH_LOGO = 3
+/** logo ありの footer は「サイト名 / ロゴ」の 2 要素 */
+const FOOTER_CHILD_COUNT_WITH_LOGO = 2
 
 function buildInput(overrides: Partial<SafeOgpInput> = {}): SafeOgpInput {
   return {
     title: toSafeText('テストタイトル', 120),
-    date: toSafeText('2026-04-28', 32),
     tags: [],
     theme: 'light',
     ...overrides,
@@ -93,7 +92,7 @@ describe('createOgpElement (no logo)', () => {
     expect(contentChildren.length).toBe(CONTENT_COLUMN_CHILD_COUNT)
   })
 
-  it('footer has exactly two cells (site name + date) when logo is absent', () => {
+  it('footer holds only the site-name cell when logo is absent', () => {
     const root = createOgpElement(buildInput())
     const [, contentColumn] = asChildArray(
       root.props.children,
@@ -103,11 +102,49 @@ describe('createOgpElement (no logo)', () => {
     ) as readonly SatoriElement[]
     const footerChildren = asChildArray(footerRow.props.children)
     expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
+    // ロゴ無しでは flex-start で左寄せ (中央や両端揃えだとサイト名が
+    // 想定外の位置に飛ぶ)
+    expect(footerRow.props.style?.justifyContent).toBe('flex-start')
+  })
+})
+
+describe('createOgpElement (title wrapping)', () => {
+  it('renders one child per wrapped title line', () => {
+    // 60 字程度の中長タイトルは 64px では 2 行に収まらないことが多いが、
+    // ここで検証したいのは「wrapOgpTitle.lines.length === titleBlock.children.length」
+    // という構造契約のみ。具体的な行数は wrapOgpTitle 側でテストする。
+    const root = createOgpElement(
+      buildInput({
+        title: toSafeText(
+          'これは折り返し検証のための比較的長めの日本語タイトルです。',
+          120,
+        ),
+      }),
+    )
+    const [, contentColumn] = asChildArray(
+      root.props.children,
+    ) as readonly SatoriElement[]
+    const [mainColumn] = asChildArray(
+      contentColumn.props.children,
+    ) as readonly SatoriElement[]
+    const mainChildren = asChildArray(
+      mainColumn.props.children,
+    ) as readonly SatoriElement[]
+    // emoji なし fixture では title block が main column の唯一の子。
+    const titleBlock = mainChildren[mainChildren.length - 1]
+    const titleChildren = asChildArray(titleBlock.props.children)
+    expect(titleChildren.length).toBeGreaterThanOrEqual(1)
+    // 各子要素が div + 単一の string children (= 1 行) であること
+    for (const child of titleChildren) {
+      const lineEl = child as SatoriElement
+      expect(lineEl.type).toBe('div')
+      expect(typeof lineEl.props.children).toBe('string')
+    }
   })
 })
 
 describe('createOgpElement (logo options)', () => {
-  it('keeps the 2-cell footer when options is undefined', () => {
+  it('keeps the single-cell footer when options is undefined', () => {
     const root = createOgpElement(buildInput())
     const [, contentColumn] = asChildArray(
       root.props.children,
@@ -119,7 +156,7 @@ describe('createOgpElement (logo options)', () => {
     expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
   })
 
-  it('keeps the 2-cell footer when options.logoDataUri is null', () => {
+  it('keeps the single-cell footer when options.logoDataUri is null', () => {
     const root = createOgpElement(buildInput(), { logoDataUri: null })
     const [, contentColumn] = asChildArray(
       root.props.children,
@@ -131,7 +168,7 @@ describe('createOgpElement (logo options)', () => {
     expect(footerChildren.length).toBe(FOOTER_CHILD_COUNT_WITHOUT_LOGO)
   })
 
-  it('renders the logo as the third footer cell when logoDataUri is provided', () => {
+  it('renders the logo as the right-hand footer cell when logoDataUri is provided', () => {
     const root = createOgpElement(buildInput(), {
       logoDataUri: DUMMY_LOGO_DATA_URI,
     })
@@ -150,5 +187,7 @@ describe('createOgpElement (logo options)', () => {
     expect(logoCell.props.src).toBe(DUMMY_LOGO_DATA_URI)
     expect(logoCell.props.width).toBe(EXPECTED_LOGO_WIDTH)
     expect(logoCell.props.height).toBe(EXPECTED_LOGO_HEIGHT)
+    // ロゴありは space-between でサイト名とロゴを両端に振り分ける。
+    expect(footerRow.props.style?.justifyContent).toBe('space-between')
   })
 })
