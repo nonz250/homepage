@@ -212,7 +212,7 @@ const OGP_FONT_SOURCE_PATH = resolve(__dirname, OGP_FONT_SOURCE_RELATIVE)
  * `loadOgpLogoBuffer` で Buffer を取り、`data:image/png;base64,...` の
  * data URI に変換して `writeArticleOgpPngs` に渡す。
  *
- * favicon (`/favicon.ico` の元) と同一 PNG (1024x1024 square) を共用するため、
+ * favicon (`/icon.png`) と同一ファイルを共用するため、
  * 差し替え時は OGP 画像への影響も併せて確認すること。
  */
 const OGP_LOGO_PATH = resolve(__dirname, 'public/icon.png')
@@ -523,8 +523,8 @@ export default defineNuxtConfig({
           readSourceFont: () => readFileSync(OGP_FONT_SOURCE_PATH),
         },
       )
-      // OGP テンプレートに焼き込むサイトアイコン (favicon と同一の PNG) を
-      // data URI 化する。loadOgpLogoBuffer は失敗時に throw するため、
+      // OGP テンプレートに焼き込むサイトアイコンを data URI 化する。
+      // loadOgpLogoBuffer は失敗時に throw するため、
       // ロゴ抜きの OGP が量産されることはない (fail-closed)。
       const logoBuffer = loadOgpLogoBuffer(OGP_LOGO_PATH)
       const logoDataUri = `${OGP_LOGO_DATA_URI_PREFIX}${logoBuffer.toString('base64')}`
@@ -579,7 +579,7 @@ export default defineNuxtConfig({
         { name: 'twitter:image:alt', content: SITE_DEFAULT_OG_IMAGE_ALT },
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+        { rel: 'icon', type: 'image/png', href: '/icon.png' }
       ]
     },
   },
