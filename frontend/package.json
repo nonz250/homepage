@@ -8,8 +8,7 @@
     "prepare": "nuxt prepare",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:contract": "vitest run tests/contract",
-    "test:e2e": "playwright test"
+    "test:contract": "vitest run tests/contract"
   },
   "devDependencies": {
     "@fontsource/noto-sans-jp": "^4.5.12",
@@ -17,7 +16,6 @@
     "@fortawesome/free-brands-svg-icons": "^6.2.1",
     "@fortawesome/vue-fontawesome": "^3.0.2",
     "@nuxt/content": "^3.13.0",
-    "@playwright/test": "^1.59.1",
     "@resvg/resvg-js": "^2.6.2",
     "@twemoji/svg": "^15.0.0",
     "@types/better-sqlite3": "^7.6.13",
@@ -28,7 +26,6 @@
     "cross-env": "^10.1.0",
     "gray-matter": "^4.0.3",
     "happy-dom": "^20.9.0",
-    "http-server": "^14.1.1",
     "katex": "^0.16.45",
     "material-icons": "^1.13.1",
     "nuxt": "^3.21.6",
