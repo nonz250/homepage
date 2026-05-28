@@ -15,8 +15,8 @@ import { ARTICLES_TAG_ROUTE_PREFIX } from '../../../constants/tags'
  * 合成 (fs → topic aggregation) を fixture で単体の integration として確認
  * するレイヤー。
  *
- * generate 全体のスモークは別途 e2e (`articles.spec.ts`) と Step 19 以降で
- * 追加する `/articles/tags/[tag]` ページの e2e テストでカバーする。
+ * generate 全体のスモークは CI の generate ジョブの成果物検査
+ * (assert-no-drafts / assert-no-external-images) でカバーする。
  */
 describe('tags index build pipeline (integration)', () => {
   let tmpRoot: string
