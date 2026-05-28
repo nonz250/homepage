@@ -11,8 +11,7 @@ name: Test
 #   generate         - `npm run generate` を 1 回だけ走らせ、`.output/public` を
 #                       artifact 化する。下書き / 外部画像リーク検査もここで
 #                       併せて実施し、漏洩した artifact を後段に流さない。
-#                       後段 (e2e / security-headers) はこの artifact を再利用。
-#   e2e              - Playwright による end-to-end テスト
+#                       後段 (security-headers) はこの artifact を再利用。
 #   security-headers - Phase 3 Batch D: nginx 経由で CSP Report-Only など
 #                       のセキュリティヘッダが返ることを検査
 #
@@ -22,7 +21,7 @@ name: Test
 #     昇格させる。通常 PR / main push では空文字 (fetch 実行)。
 #
 # paths フィルタ:
-#   - docs-only PR で 7 ジョブ全部が起動するコストを削減するため、
+#   - docs-only PR で 6 ジョブ全部が起動するコストを削減するため、
 #     workflow trigger に paths allowlist を導入する。`frontend/`, `scripts/`,
 #     `infra/`, `site-articles/`, `.github/workflows/test.yml` のいずれにも
 #     変更がない PR ではジョブが起動しない。required check に紐付ける場合は、
@@ -152,7 +151,7 @@ jobs:
     # `npm run generate` を test ワークフロー内で 1 回だけ実行し、`.output/public`
     # を artifact として後段に共有する。下書き / 外部画像リーク検査も併せて
     # 行い、漏洩を含む artifact を upload しない fail-closed 設計にする。
-    # 後段の e2e / security-headers は同 artifact を download して再利用する。
+    # 後段の security-headers は同 artifact を download して再利用する。
     runs-on: ubuntu-latest
     # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
     env:
@@ -197,35 +196,6 @@ jobs:
           if-no-files-found: error
           # 検証用途で長期保管不要。CI ストレージを節約する。
           retention-days: 1
-
-  e2e:
-    runs-on: ubuntu-latest
-    # ブラウザ起動が重いので、静的テストが通ってから回す。generate からは
-    # artifact を受け取るのでこちらも依存に加える。
-    needs: [generate, unit, integration, contract]
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.x'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-      - name: Download generated public/
-        uses: actions/download-artifact@v4
-        with:
-          name: test-generated-public
-          # playwright.config.ts の webServer は frontend/.output/public を
-          # http-server で配信する前提なので、そこに展開する。
-          path: frontend/.output/public/
-      - name: Run E2E tests
-        run: npm run test:e2e
 
   security-headers:
     # Phase 3 Batch D: `infra/nginx/` or `.github/workflows/test.yml` が
