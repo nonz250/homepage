@@ -81,7 +81,7 @@ jobs:
       - name: Nuxt prepare (generate .nuxt types)
         run: npm run prepare
       - name: Type check with vue-tsc
-        run: npx vue-tsc --noEmit
+        run: npm run typecheck
 
   unit:
     runs-on: ubuntu-latest
