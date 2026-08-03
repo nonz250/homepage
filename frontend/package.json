@@ -6,6 +6,7 @@
     "generate": "cross-env CONTENT_PREVIEW= NODE_ENV=production nuxt generate",
     "preview": "nuxt preview",
     "prepare": "nuxt prepare",
+    "typecheck": "vue-tsc --noEmit",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:contract": "vitest run tests/contract"
@@ -36,7 +37,9 @@
     "sass": "^1.57.1",
     "satori": "^0.26.0",
     "subset-font": "^2.5.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.4",
+    "vue-tsc": "^3.3.9",
     "zenn-markdown-html": "^0.4.7"
   },
   "dependencies": {
