@@ -33,7 +33,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.19.17",
     "gray-matter": "^4.0.3",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
     "tsx": "^4.22.4",
