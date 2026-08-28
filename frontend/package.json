@@ -29,7 +29,7 @@
     "happy-dom": "^20.9.0",
     "katex": "^0.16.45",
     "material-icons": "^1.13.1",
-    "nuxt": "^3.21.7",
+    "nuxt": "^3.21.10",
     "open-graph-scraper": "^6.11.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
