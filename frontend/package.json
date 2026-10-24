@@ -7,8 +7,6 @@
     "preview": "nuxt preview",
     "prepare": "nuxt prepare",
     "typecheck": "vue-tsc --noEmit",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
     "test:contract": "vitest run tests/contract"
   },
   "devDependencies": {
@@ -21,12 +19,9 @@
     "@twemoji/svg": "^15.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/sanitize-html": "^2.16.1",
-    "@vitest/coverage-v8": "^4.1.4",
-    "@vue/test-utils": "^2.4.6",
     "better-sqlite3": "^12.9.0",
     "cross-env": "^10.1.0",
     "gray-matter": "^4.0.3",
-    "happy-dom": "^20.9.0",
     "katex": "^0.16.45",
     "material-icons": "^1.13.1",
     "nuxt": "^3.21.10",
@@ -39,8 +34,7 @@
     "subset-font": "^2.5.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.4",
-    "vue-tsc": "^3.3.9",
-    "zenn-markdown-html": "^0.4.7"
+    "vue-tsc": "^3.3.9"
   },
   "dependencies": {
     "mermaid": "^11.16.1"
