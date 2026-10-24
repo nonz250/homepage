@@ -57,10 +57,17 @@ const qiitaPayloadSchema = z
   .optional()
 
 /**
+ * updated_at は Zenn / Qiita に出力しないため、published_at のような Zenn 旧形式の
+ * 受理は不要。frontend 側 schema と同じ ISO 8601 (offset 付き) に揃える。
+ */
+const UPDATED_AT_FORMAT_ERROR_MESSAGE =
+  'updated_at は "YYYY-MM-DDTHH:mm:ss±HH:mm" (例: 2026-04-19T21:00:00+09:00) の形式で指定してください'
+
+/**
  * 記事 frontmatter の v4 スキーマ (site-articles/*.md の原典を規定する).
  *
  * 構造:
- *   - コア: title / emoji / type / topics / published / published_at
+ *   - コア: title / emoji / type / topics / published / published_at / updated_at
  *   - 配信フラグ: site (default true) / zenn (default false) / qiita (default false)
  *   - slug: zennSlug / qiitaSlug (フラグと紐づく .refine で必須判定)
  *   - qiitaPayload: qiita-cli が sync で差し込む補助 frontmatter
@@ -83,6 +90,10 @@ export const articleFrontmatterSchema = z
     topics: articleTopicsSchema,
     published: z.boolean(),
     published_at: publishedAtSchema,
+    updated_at: z
+      .string()
+      .datetime({ offset: true, message: UPDATED_AT_FORMAT_ERROR_MESSAGE })
+      .optional(),
     site: z.boolean().default(true),
     zenn: z.boolean().default(false),
     qiita: z.boolean().default(false),

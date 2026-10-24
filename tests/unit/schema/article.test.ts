@@ -60,6 +60,56 @@ describe('articleFrontmatterSchema', () => {
     })
   })
 
+  describe('updated_at (optional)', () => {
+    it('accepts a frontmatter without updated_at', () => {
+      expect(articleFrontmatterSchema.safeParse(baseValid).success).toBe(true)
+    })
+
+    it('accepts updated_at in ISO 8601 with offset and keeps the input string', () => {
+      const result = articleFrontmatterSchema.parse({
+        ...baseValid,
+        updated_at: '2026-05-01T08:45:36+09:00',
+      })
+      expect(result.updated_at).toBe('2026-05-01T08:45:36+09:00')
+    })
+
+    it('rejects updated_at in the Zenn legacy format', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: '2026-05-01 08:45',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('reports updated_at (not published_at) in the error message', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: '2026/05/01',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toEqual(['updated_at'])
+        expect(result.error.issues[0].message).toContain('updated_at')
+      }
+    })
+
+    it('rejects updated_at that is not a datetime string', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: '2026/05/01',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a non-string updated_at', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: 20260501,
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('strict mode: unknown keys', () => {
     it('rejects an unknown top-level key', () => {
       const result = articleFrontmatterSchema.safeParse({
