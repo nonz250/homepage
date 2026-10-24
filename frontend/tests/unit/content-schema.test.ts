@@ -38,6 +38,14 @@ describe('articleFrontmatterSchema', () => {
       expect(result.published).toBe(false)
     })
 
+    it('accepts updated_at in ISO8601 with offset', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: '2026-04-18T08:45:36+09:00',
+      })
+      expect(result.success).toBe(true)
+    })
+
     it('accepts emoji when provided', () => {
       const result = articleFrontmatterSchema.safeParse({
         ...baseValid,
@@ -164,6 +172,14 @@ describe('articleFrontmatterSchema', () => {
       const result = articleFrontmatterSchema.safeParse({
         ...baseValid,
         published_at: '2026-04-17',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an updated_at that is not ISO8601 with offset', () => {
+      const result = articleFrontmatterSchema.safeParse({
+        ...baseValid,
+        updated_at: '2026-04-18',
       })
       expect(result.success).toBe(false)
     })

@@ -118,6 +118,19 @@ describe('toArticle', () => {
     })
   })
 
+  it('keeps updated_at when it is a string', () => {
+    const result = toArticle({
+      stem: 's',
+      updated_at: '2026-04-02T08:45:36+09:00',
+    })
+    expect(result.updated_at).toBe('2026-04-02T08:45:36+09:00')
+  })
+
+  it('drops a non-string updated_at', () => {
+    const result = toArticle({ stem: 's', updated_at: 20260402 })
+    expect(result.updated_at).toBeUndefined()
+  })
+
   it('defaults site to true when the field is missing', () => {
     const result = toArticle({
       stem: 's',

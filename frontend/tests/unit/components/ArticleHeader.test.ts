@@ -40,6 +40,26 @@ describe('ArticleHeader', () => {
     expect(wrapper.find('.published-at').text()).toBe('2026-04-01')
   })
 
+  it('renders the formatted updated date when updated_at is given', () => {
+    const wrapper = mount(ArticleHeader, {
+      props: {
+        article: { ...baseArticle, updated_at: '2026-04-10T08:45:36+09:00' },
+      },
+    })
+    const updated = wrapper.find('.updated-at')
+    expect(updated.text()).toContain('2026-04-10')
+    expect(updated.find('time').attributes('datetime')).toBe(
+      '2026-04-10T08:45:36+09:00',
+    )
+  })
+
+  it('does not render the updated date when updated_at is absent', () => {
+    const wrapper = mount(ArticleHeader, {
+      props: { article: baseArticle },
+    })
+    expect(wrapper.find('.updated-at').exists()).toBe(false)
+  })
+
   it('renders topics as list items', () => {
     const wrapper = mount(ArticleHeader, {
       props: { article: baseArticle },

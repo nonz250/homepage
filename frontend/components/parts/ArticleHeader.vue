@@ -11,6 +11,9 @@
       <time v-if="publishedDate" :datetime="article.published_at" class="published-at">
         {{ publishedDate }}
       </time>
+      <span v-if="updatedDate" class="updated-at">
+        更新 <time :datetime="article.updated_at">{{ updatedDate }}</time>
+      </span>
       <ul v-if="article.topics.length > 0" class="topics">
         <li v-for="topic in article.topics" :key="topic" class="topic">
           {{ topic }}
@@ -24,7 +27,7 @@
 /**
  * 記事詳細ページ上部に配置するヘッダ。
  *
- * タイトル / 公開日 / topics / Draft バッジのみを表示する presentational
+ * タイトル / 公開日 / 更新日 / topics / Draft バッジのみを表示する presentational
  * コンポーネント。判定ロジックは持たず、`isDraft` は親 (詳細ページ) から
  * preview 状態と `published` フラグで導出して渡す。
  */
@@ -44,6 +47,10 @@ const props = withDefaults(
 
 const publishedDate = computed<string>(() =>
   formatPublishedDate(props.article.published_at),
+)
+
+const updatedDate = computed<string>(() =>
+  formatPublishedDate(props.article.updated_at),
 )
 </script>
 
@@ -108,7 +115,8 @@ const publishedDate = computed<string>(() =>
   gap: 0.75rem;
 }
 
-.published-at {
+.published-at,
+.updated-at {
   font-size: 0.9rem;
   color: color.$lnk-black;
 }
