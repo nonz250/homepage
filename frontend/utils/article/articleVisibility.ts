@@ -68,6 +68,7 @@ export interface ToArticleInput {
   readonly topics?: unknown
   readonly published?: unknown
   readonly published_at?: unknown
+  readonly updated_at?: unknown
   readonly emoji?: unknown
   /**
    * 本サイト配信フラグ (v4)。
@@ -208,6 +209,8 @@ export function toArticle(item: ToArticleInput): Article {
     published: item.published === true,
     published_at:
       typeof item.published_at === 'string' ? item.published_at : undefined,
+    updated_at:
+      typeof item.updated_at === 'string' ? item.updated_at : undefined,
     emoji: typeof item.emoji === 'string' ? item.emoji : undefined,
     site: coerceSiteVisibility(item.site),
     zenn: coerceExternalDistribution(item.zenn),

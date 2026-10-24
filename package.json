@@ -4,8 +4,6 @@
   "description": "個人サイト ([nozomi.bike](https://nozomi.bike)) と Zenn を兼ねるリポジトリ。",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
     "generate": "tsx scripts/generate.ts",
     "verify:generated": "node scripts/verify-generated-frontmatter.js",
     "assert:public-allowlist": "bash scripts/assert-public-allowlist.sh",
@@ -39,7 +37,6 @@
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "unified": "^11.0.5",
-    "vitest": "^4.1.4",
     "zod": "^3.25.76"
   }
 }

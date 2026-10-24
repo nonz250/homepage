@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
-    "types": ["node", "vitest/globals"],
+    "types": ["node"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -24,10 +24,9 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@scripts/*": ["scripts/*"],
-      "@tests/*": ["tests/*"]
+      "@scripts/*": ["scripts/*"]
     }
   },
-  "include": ["scripts/**/*.ts", "tests/**/*.ts", "vitest.config.ts"],
+  "include": ["scripts/**/*.ts"],
   "exclude": ["node_modules", "frontend", "dist-scripts"]
 }

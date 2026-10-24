@@ -35,6 +35,7 @@ export const articleFrontmatterSchema = z
       .default([]),
     published: z.boolean().default(false),
     published_at: z.string().datetime({ offset: true }).optional(),
+    updated_at: z.string().datetime({ offset: true }).optional(),
     /**
      * 本サイト ([nozomi.bike](https://nozomi.bike)) 上に公開するか。
      * v4 で導入した配信フラグの 1 つで、未指定時は true (= 旧挙動と同じく

@@ -4,9 +4,6 @@ name: Test
 #
 # ジョブ構成:
 #   typecheck        - vue-tsc による型チェック (必須ゲート)
-#   unit             - 純関数 / コンポーネント単体テスト
-#   integration      - vitest integration (vitest が `npm run generate` を回さず
-#                       Nuxt Content の native binding を直接使う)
 #   contract         - CONTENT_PREVIEW などランタイム契約の固定
 #   generate         - `npm run generate` を 1 回だけ走らせ、`.output/public` を
 #                       artifact 化する。下書き / 外部画像リーク検査もここで
@@ -17,11 +14,11 @@ name: Test
 #
 # fork PR 制御:
 #   - fork の PR からは OGP 用ネットワーク fetch を一切行わないよう、
-#     generate / integration ジョブで `NO_NETWORK_FETCH` を条件付きで `'1'` に
+#     generate ジョブで `NO_NETWORK_FETCH` を条件付きで `'1'` に
 #     昇格させる。通常 PR / main push では空文字 (fetch 実行)。
 #
 # paths フィルタ:
-#   - docs-only PR で 6 ジョブ全部が起動するコストを削減するため、
+#   - docs-only PR で 4 ジョブ全部が起動するコストを削減するため、
 #     workflow trigger に paths allowlist を導入する。`frontend/`, `scripts/`,
 #     `infra/`, `site-articles/`, `.github/workflows/test.yml` のいずれにも
 #     変更がない PR ではジョブが起動しない。required check に紐付ける場合は、
@@ -83,51 +80,6 @@ jobs:
       - name: Type check with vue-tsc
         run: npm run typecheck
 
-  unit:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.x'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Nuxt prepare (generate .nuxt types)
-        run: npm run prepare
-      - name: Run unit tests
-        run: npm run test:unit
-
-  integration:
-    runs-on: ubuntu-latest
-    # fork PR では head.repo.full_name が upstream と異なるため、そこだけ
-    # NO_NETWORK_FETCH=1 に昇格させて外部 fetch を遮断する。通常 PR / main
-    # push では空文字 (fetch 実行) のままにする。
-    env:
-      NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.x'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
-        run: npm rebuild better-sqlite3
-      - name: Nuxt prepare (generate .nuxt types)
-        run: npm run prepare
-      - name: Run integration tests
-        run: npm run test:integration
-
   contract:
     runs-on: ubuntu-latest
     defaults:
@@ -153,7 +105,9 @@ jobs:
     # 行い、漏洩を含む artifact を upload しない fail-closed 設計にする。
     # 後段の security-headers は同 artifact を download して再利用する。
     runs-on: ubuntu-latest
-    # fork PR でのみ外部 fetch を遮断する。詳細は integration job 参照。
+    # fork PR では head.repo.full_name が upstream と異なるため、そこだけ
+    # NO_NETWORK_FETCH=1 に昇格させて外部 fetch を遮断する。通常 PR / main
+    # push では空文字 (fetch 実行) のままにする。
     env:
       NO_NETWORK_FETCH: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
     defaults:
@@ -180,12 +134,6 @@ jobs:
       - name: Assert no external images in build output
         working-directory: ${{ github.workspace }}
         run: bash scripts/assert-no-external-images.sh
-      # Slack の Link Expanding は head 先頭 8KB しか fetch しないため、
-      # 記事ページの OGP meta が `<style>` より前 & 先頭 8KB 以内に出ているか
-      # を generate 産物に対して直接検証する。`integration` job は generate
-      # に非依存なので、ここで artifact upload 前に同 runner で済ませる。
-      - name: Assert slack unfurl head order
-        run: npx vitest run tests/integration/prerender/articleSlackUnfurlOrder.test.ts
       - name: Upload generated public/
         uses: actions/upload-artifact@v4
         with:

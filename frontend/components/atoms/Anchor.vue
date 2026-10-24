@@ -32,7 +32,7 @@ const isActive = computed((): boolean => {
 
 let shineResetTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-watch(active, (value) => {
+watch(active, (value: boolean) => {
   // watch 再発火時には前回の timeout をクリアしてから新規発行することで、
   // 古い値での多重発火（先行する false 書き換え）を防止する。
   if (shineResetTimeoutId !== null) {
