@@ -160,6 +160,10 @@ generator (`scripts/generate.ts`) が派生生成する成果物である (Zenn 
 - `@[mermaid]` / ` ```mermaid ` フェンス: Mermaid 図
 - `:::warning` / `:::tip` / `:::info` など、`message` / `details` 以外のコンテナ
 
+コードブロックのファイル名指定 (` ```ts:index.ts `) はビルドこそ通るが、
+`ts:index.ts` 全体が言語名と解釈されてシンタックスハイライトが効かない。
+本サイトではファイル名を表示する仕組みもないため、言語名だけを書くこと。
+
 詳細な設計は ADR `frontend/docs/decisions/phase-2-zenn-syntax.md` を参照。
 
 ## タグ別一覧ページ
