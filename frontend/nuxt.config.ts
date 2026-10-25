@@ -276,6 +276,10 @@ export default defineNuxtConfig({
   // Nuxt 3 のデフォルトは true だが、設計 v4 の 6.3 節に従って明示する。
   ssr: true,
 
+  // 省略すると、Nuxt 4 は app/ に router.options.ts 以外のファイルが
+  // 置かれた時点で srcDir を app/ に切り替え、pages/ などを読まなくなる。
+  srcDir: '.',
+
   modules: [
     '@nuxt/content',
   ],
