@@ -196,11 +196,11 @@ export function extractTweetId(raw: string): string | null {
   // segments を空要素除去しつつ分割。
   const segments = parsed.pathname.split('/').filter((s) => s.length > 0)
   const statusIndex = segments.indexOf('status')
-  if (statusIndex < 0 || statusIndex + 1 >= segments.length) {
+  if (statusIndex < 0) {
     return null
   }
   const idCandidate = segments[statusIndex + 1]
-  if (!TWEET_ID_PATTERN.test(idCandidate)) {
+  if (idCandidate === undefined || !TWEET_ID_PATTERN.test(idCandidate)) {
     return null
   }
   return idCandidate
@@ -259,11 +259,10 @@ export function extractGistUserId(
     return null
   }
   const segments = parsed.pathname.split('/').filter((s) => s.length > 0)
-  if (segments.length < 2) {
+  const [user, id] = segments
+  if (user === undefined || id === undefined) {
     return null
   }
-  const user = segments[0]
-  const id = segments[1]
   if (!GIST_USER_PATTERN.test(user)) {
     return null
   }

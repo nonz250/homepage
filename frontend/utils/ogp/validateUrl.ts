@@ -148,7 +148,7 @@ function ipv6ToWords(ip: string): readonly number[] | null {
   const ipv4MappedMatch = ip.match(/^(.*:)((?:\d{1,3}\.){3}\d{1,3})$/)
   let normalized = ip
   if (ipv4MappedMatch !== null) {
-    const ipv4Int = ipv4ToInt(ipv4MappedMatch[2])
+    const ipv4Int = ipv4ToInt(ipv4MappedMatch[2] ?? '')
     if (ipv4Int === null) {
       return null
     }
@@ -168,7 +168,7 @@ function ipv6ToWords(ip: string): readonly number[] | null {
 
   let parts: string[]
   if (normalized.includes('::')) {
-    const [head, tail] = normalized.split('::')
+    const [head = '', tail = ''] = normalized.split('::')
     const headParts = head === '' ? [] : head.split(':')
     const tailParts = tail === '' ? [] : tail.split(':')
     const missing = ipv6WordCount - headParts.length - tailParts.length
@@ -204,7 +204,7 @@ function ipv6ToWords(ip: string): readonly number[] | null {
  * 拾うことを期待する)。
  */
 function isIpv4InRange(ip: string, cidr: string): boolean {
-  const [networkStr, prefixStr] = cidr.split('/')
+  const [networkStr = '', prefixStr = ''] = cidr.split('/')
   const ipv4PrefixMax = 32
   const prefix = Number.parseInt(prefixStr, 10)
   if (Number.isNaN(prefix) || prefix < 0 || prefix > ipv4PrefixMax) {
@@ -229,7 +229,7 @@ function isIpv4InRange(ip: string, cidr: string): boolean {
  * IPv6 アドレスが指定 CIDR 範囲に含まれるか判定する純関数。
  */
 function isIpv6InRange(ip: string, cidr: string): boolean {
-  const [networkStr, prefixStr] = cidr.split('/')
+  const [networkStr = '', prefixStr = ''] = cidr.split('/')
   const ipv6PrefixMax = 128
   const prefix = Number.parseInt(prefixStr, 10)
   if (Number.isNaN(prefix) || prefix < 0 || prefix > ipv6PrefixMax) {
@@ -260,8 +260,8 @@ function isIpv6InRange(ip: string, cidr: string): boolean {
   const shift = bitsPerWord - remainderBits
   // ビットシフト相当を除算で。
   const divisor = Math.pow(2, shift)
-  const ipMasked = Math.floor(ipWords[fullWords] / divisor)
-  const netMasked = Math.floor(netWords[fullWords] / divisor)
+  const ipMasked = Math.floor(ipWords[fullWords]! / divisor)
+  const netMasked = Math.floor(netWords[fullWords]! / divisor)
   // 念のため上位ビットのみを比較するための上限。
   const maskedMax = Math.floor(wordMaskMax / divisor)
   return (ipMasked & maskedMax) === (netMasked & maskedMax)

@@ -95,8 +95,8 @@ export function wrapOgpTitle(
   const atoms = splitIntoAtoms(title)
 
   for (let i = 0; i < OGP_TITLE_FONT_SIZES_PX.length; i++) {
-    const fontSizePx = OGP_TITLE_FONT_SIZES_PX[i]
-    const maxLines = OGP_TITLE_MAX_LINES_PER_SIZE[i]
+    const fontSizePx = OGP_TITLE_FONT_SIZES_PX[i]!
+    const maxLines = OGP_TITLE_MAX_LINES_PER_SIZE[i]!
     const availableWidthPx = opts.contentWidthPx * SAFE_WIDTH_RATIO
     const lines = packAtomsIntoLines(atoms, fontSizePx, availableWidthPx)
     if (lines.length <= maxLines) {
@@ -109,9 +109,9 @@ export function wrapOgpTitle(
   // フロアサイズでも収まらないケース。最終手段として末尾を ellipsis で
   // 切り詰める。SafeText の不変条件 (制御文字なし) は維持される (… は U+2026)。
   const floorFontSizePx =
-    OGP_TITLE_FONT_SIZES_PX[OGP_TITLE_FONT_SIZES_PX.length - 1]
+    OGP_TITLE_FONT_SIZES_PX[OGP_TITLE_FONT_SIZES_PX.length - 1]!
   const floorMaxLines =
-    OGP_TITLE_MAX_LINES_PER_SIZE[OGP_TITLE_MAX_LINES_PER_SIZE.length - 1]
+    OGP_TITLE_MAX_LINES_PER_SIZE[OGP_TITLE_MAX_LINES_PER_SIZE.length - 1]!
   const availableWidthPx = opts.contentWidthPx * SAFE_WIDTH_RATIO
   const lines = packAtomsIntoLines(atoms, floorFontSizePx, availableWidthPx)
   const truncated = lines.slice(0, floorMaxLines)
@@ -145,8 +145,7 @@ function splitIntoAtoms(text: string): string[] {
     }
   }
 
-  for (let i = 0; i < codepoints.length; i++) {
-    const ch = codepoints[i]
+  for (const ch of codepoints) {
 
     if (ch === SPACE_CHAR) {
       flush()
@@ -207,10 +206,8 @@ function packAtomsIntoLines(
     // atom 単独で利用可能幅を超える場合の救済。pieces[0..n-2] を確定行として
     // emit し、最終 piece を新たな current にする (current は呼び出し元で更新)。
     const pieces = splitOversizedAtom(atom, fontSizePx, availableWidthPx)
-    for (let k = 0; k < pieces.length - 1; k++) {
-      lines.push(pieces[k])
-    }
-    current = pieces[pieces.length - 1]
+    lines.push(...pieces.slice(0, -1))
+    current = pieces[pieces.length - 1] ?? ''
   }
 
   for (const atom of atoms) {
@@ -234,7 +231,7 @@ function packAtomsIntoLines(
 
     if (
       atom.length > 0 &&
-      FORBIDDEN_LINE_START_CHARS.includes(atom[0])
+      FORBIDDEN_LINE_START_CHARS.includes(atom.charAt(0))
     ) {
       // 行頭禁則: 改行せず、利用可能幅を多少超えても前行にぶら下げる。
       current = candidate

@@ -276,6 +276,10 @@ export default defineNuxtConfig({
   // Nuxt 3 のデフォルトは true だが、設計 v4 の 6.3 節に従って明示する。
   ssr: true,
 
+  // 省略すると、Nuxt 4 は app/ に router.options.ts 以外のファイルが
+  // 置かれた時点で srcDir を app/ に切り替え、pages/ などを読まなくなる。
+  srcDir: '.',
+
   modules: [
     '@nuxt/content',
   ],
@@ -385,6 +389,9 @@ export default defineNuxtConfig({
     // (`server/routes/tags.json.get.ts`) から参照する。
     // server 専用の情報なので `public` 配下には置かない。
     tagsIndexJson: '{}',
+    // server handler の import.meta.url は bundle 先の buildDir を指すため、
+    // そこからの相対パスでは記事ディレクトリを解決できない。
+    articlesSourceDir: SITE_ARTICLES_DIR,
     public: {
       // サーバ/クライアントで共有されるプレビュー制御フラグ。
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。

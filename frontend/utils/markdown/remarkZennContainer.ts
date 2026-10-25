@@ -390,8 +390,8 @@ function rewriteArgumentedContainers(parent: Parent): void {
   const rewritten: RootContent[] = []
   let index = 0
   while (index < children.length) {
-    const current = children[index]
-    if (current && current.type === 'paragraph') {
+    const current = children[index]!
+    if (current.type === 'paragraph') {
       const opener = parseOpener(current as Paragraph)
       if (opener !== null) {
         const contentChildren: RootContent[] = []

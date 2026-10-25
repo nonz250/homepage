@@ -64,8 +64,8 @@ export async function writeArticleOgpPngs(
   async function worker(): Promise<void> {
     while (true) {
       const idx = cursor++
-      if (idx >= entries.length) break
       const entry = entries[idx]
+      if (entry === undefined) break
       const png = await generateArticleOgp(entry.input, {
         fontBuffer: opts.fontBuffer,
         logoDataUri: opts.logoDataUri,

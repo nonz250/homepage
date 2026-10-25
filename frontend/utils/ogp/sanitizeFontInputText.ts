@@ -31,7 +31,7 @@ function stripLoneSurrogates(input: string): string {
       // ペアになっているか確認。ペアならそのまま 2 つ吐く。
       const next = i + 1 < input.length ? input.charCodeAt(i + 1) : -1
       if (next >= 0xdc00 && next <= 0xdfff) {
-        out += input[i] + input[i + 1]
+        out += input.slice(i, i + 2)
         i++
         continue
       }

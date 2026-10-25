@@ -197,7 +197,7 @@ describe('fixture article visibility contract (5 fixtures)', () => {
 
   describe('toArticle DTO contract', () => {
     it('maps frontmatter to the Article DTO expected by composables', () => {
-      const welcome = FIXTURES[0]
+      const welcome = FIXTURES[0]!
       const article = toArticle({
         stem: welcome.slug,
         path: `/${welcome.slug}`,
