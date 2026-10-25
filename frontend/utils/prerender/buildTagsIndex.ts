@@ -91,10 +91,9 @@ export function buildTagsIndex(
     for (const topic of article.topics) {
       if (seenForArticle.has(topic)) continue
       seenForArticle.add(topic)
-      if (!(topic in index)) {
-        index[topic] = []
-      }
-      index[topic].push(article.slug)
+      const slugs = index[topic] ?? []
+      slugs.push(article.slug)
+      index[topic] = slugs
     }
   }
   return index

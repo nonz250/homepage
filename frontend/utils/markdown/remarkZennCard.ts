@@ -134,7 +134,7 @@ async function splitParagraphByCard(
     if (buffer.length === 0) {
       return
     }
-    if (buffer.length === 1 && isWhitespaceOnlyText(buffer[0])) {
+    if (buffer.length === 1 && isWhitespaceOnlyText(buffer[0]!)) {
       buffer = []
       return
     }
@@ -142,7 +142,7 @@ async function splitParagraphByCard(
     buffer = []
   }
   for (let index = 0; index < original.length; index += 1) {
-    const node = original[index]
+    const node = original[index]!
     const next = original[index + 1]
     const embed = await maybeMakeCardEmbed(node, next, fetchOgp)
     if (embed !== null) {

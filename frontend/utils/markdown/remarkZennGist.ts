@@ -107,7 +107,7 @@ function splitParagraphByGist(paragraph: Paragraph): RootContent[] {
     if (buffer.length === 0) {
       return
     }
-    if (buffer.length === 1 && isWhitespaceOnlyText(buffer[0])) {
+    if (buffer.length === 1 && isWhitespaceOnlyText(buffer[0]!)) {
       buffer = []
       return
     }
@@ -115,7 +115,7 @@ function splitParagraphByGist(paragraph: Paragraph): RootContent[] {
     buffer = []
   }
   for (let index = 0; index < original.length; index += 1) {
-    const node = original[index]
+    const node = original[index]!
     const next = original[index + 1]
     const embed = maybeMakeGistEmbed(node, next)
     if (embed !== null) {
