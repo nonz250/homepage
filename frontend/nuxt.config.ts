@@ -385,6 +385,9 @@ export default defineNuxtConfig({
     // (`server/routes/tags.json.get.ts`) から参照する。
     // server 専用の情報なので `public` 配下には置かない。
     tagsIndexJson: '{}',
+    // server handler の import.meta.url は bundle 先の buildDir を指すため、
+    // そこからの相対パスでは記事ディレクトリを解決できない。
+    articlesSourceDir: SITE_ARTICLES_DIR,
     public: {
       // サーバ/クライアントで共有されるプレビュー制御フラグ。
       // `CONTENT_PREVIEW` の正規化結果と NODE_ENV の組み合わせで決定する。

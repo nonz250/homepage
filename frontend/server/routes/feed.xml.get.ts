@@ -11,14 +11,13 @@
  * `.output/public/feed.xml` として emit する運用を想定している。
  *
  * fail-safe:
- *   - 記事ディレクトリが存在しない場合は空フィードを返す (500 を避ける)
+ *   - 記事ディレクトリが見つからない場合は 500 を返し、prerender を失敗させる
  *   - 個別の記事で `title` が空・`published_at` が無効な場合はその記事を
  *     feed から除外する (`<item>` が崩れないよう fail-closed)
  */
-import { defineEventHandler, setResponseHeader } from 'h3'
+import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { statSync } from 'node:fs'
 import { loadArticlesFromFs } from '../../utils/prerender/loadArticlesFromFs'
 import {
   isArticleSiteVisible,
@@ -41,22 +40,9 @@ const CONTENT_TYPE_RSS = 'application/rss+xml; charset=utf-8'
  */
 const FALLBACK_BASE_URL = 'https://nozomi.bike'
 
-/**
- * server route の相対パスから記事ソースディレクトリの絶対パスを解決する (v4)。
- *
- * v4 では原典が `site-articles/` に統一されたため、この 1 箇所だけを走査する。
- * `articles/` は generator の出力であり、本サイト RSS には使わない。
- */
-function resolveArticleSourceDir(): string {
-  const currentFile = fileURLToPath(import.meta.url)
-  const currentDir = dirname(currentFile)
-  // server/routes → server → frontend → repo root
-  const repoRoot = resolve(currentDir, '../../../')
-  return resolve(repoRoot, 'site-articles')
-}
-
 export default defineEventHandler((event) => {
   const config = useRuntimeConfig(event) as {
+    articlesSourceDir?: string
     public?: { baseUrl?: string }
   }
   const baseUrl =
@@ -64,8 +50,21 @@ export default defineEventHandler((event) => {
       ? config.public.baseUrl
       : FALLBACK_BASE_URL
 
+  // loadArticlesFromFs は存在しないディレクトリを黙って読み飛ばす。空フィードを
+  // 返すと記事が消えたことに気づけないため、ここで prerender ごと失敗させる。
+  const articlesSourceDir = config.articlesSourceDir
+  if (
+    typeof articlesSourceDir !== 'string' ||
+    !statSync(articlesSourceDir, { throwIfNoEntry: false })?.isDirectory()
+  ) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'article source directory is not found',
+    })
+  }
+
   const now = Date.now()
-  const articles = loadArticlesFromFs(resolveArticleSourceDir())
+  const articles = loadArticlesFromFs(articlesSourceDir)
 
   // 公開判定 → サイト配信フラグ判定 → タイトル/日時の健全性チェック →
   // `published_at` 降順ソート。
