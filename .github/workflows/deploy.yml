@@ -68,16 +68,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24.x'
+          node-version: '26.x'
 
       - name: Install frontend dependencies
         run: npm ci --ignore-scripts
-
-      - name: Rebuild better-sqlite3 (Nuxt Content native binding)
-        # Nuxt Content v3 は better-sqlite3 の native binding を必要とする。
-        # `--ignore-scripts` で install 時の prebuild がスキップされるため、
-        # この 1 パッケージだけを明示的に rebuild する。
-        run: npm rebuild better-sqlite3
 
       - name: Nuxt prepare (generate .nuxt types)
         # `nuxt prepare` は `.nuxt` 配下の型ファイルを生成する必須ステップ。
