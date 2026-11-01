@@ -30,7 +30,7 @@
     "remark-math": "^6.0.0",
     "sanitize-html": "^2.18.1",
     "sass": "^1.57.1",
-    "satori": "^0.26.0",
+    "satori": "^0.33.5",
     "subset-font": "^2.5.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.12",
